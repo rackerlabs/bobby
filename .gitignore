@@ -1,3 +1,4 @@
 *.pyc
 bobby.sqlite
 env
+_trial_temp
