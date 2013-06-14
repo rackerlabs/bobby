@@ -52,7 +52,7 @@ def group_delete(request, group_id):
 
 @app.route('/groups/<string:group_id>/servers/<string:server_id>', methods=['PUT'])
 def group_server_update(request, group_id, server_id):
-    d = db.query('INSERT INTO SERVERS ("id", "group_id", "state") VALUES ("{0}", "{1}", "0");'.format(server_id, group_id))
+    d = db.query('INSERT INTO SERVERS ("id", "group_id", "state") VALUES ("{0}", "{1}", "0");'.format(group_id, server_id))
 
     def _return_ok(_):
         request.finish()
@@ -71,7 +71,7 @@ def group_server_delete(request, group_id, server_id):
 @app.route('/groups/<string:group_id>/servers/<string:server_id>/webhook', methods=['POST'])
 def group_server_webhook(request, group_id, server_id):
     state = (not request.args.get('state')[0] == 'OK')
-    d = db.query('UPDATE SERVERS SET state="{0}" WHERE id="{1}"'.format(
+    d = db.query('UPDATE SERVERS SET state="{0}" WHERE id="{1}";'.format(
         state, server_id))
 
     def _return_ok(_):
