@@ -18,6 +18,7 @@ def groups(request):
         request.finish()
     return d.addCallback(_return_result)
 
+
 @app.route('/servers')
 def servers(request):
     d = db.query('SELECT id, group_id, state FROM SERVERS;')
@@ -26,6 +27,7 @@ def servers(request):
         request.write(json.dumps(result))
         request.finish()
     return d.addCallback(_return_result)
+
 
 @app.route('/groups/<string:group_id>', methods=['PUT'])
 def group_update(request, group_id):
@@ -38,13 +40,15 @@ def group_update(request, group_id):
         request.finish()
     return d.addCallback(_return_ok)
 
+
 @app.route('/groups/<string:group_id>', methods=['DELETE'])
 def group_delete(request, group_id):
     d = db.query('DELETE FROM GROUPS WHERE group_id = {0};'.format(group_id))
 
     def _return_ok(_):
-        request.finish();
+        request.finish()
     return d.addCallback(_return_ok)
+
 
 @app.route('/groups/<string:group_id>/servers/<string:server_id>', methods=['PUT'])
 def group_server_update(request, group_id, server_id):
@@ -54,6 +58,7 @@ def group_server_update(request, group_id, server_id):
         request.finish()
     return d.addCallback(_return_ok)
 
+
 @app.route('/groups/<string:group_id>/servers/<string:server_id>', methods=['DELETE'])
 def group_server_delete(request, group_id, server_id):
     d = db.query('DELETE FROM SERVERS WHERE id = {0};'.format(server_id))
@@ -61,6 +66,7 @@ def group_server_delete(request, group_id, server_id):
     def _return_ok(_):
         request.finish()
     return d.addCallback(_return_ok)
+
 
 @app.route('/groups/<string:group_id>/servers/<string:server_id>/webhook', methods=['POST'])
 def group_server_webhook(request, group_id, server_id):
