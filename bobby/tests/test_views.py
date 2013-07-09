@@ -41,9 +41,9 @@ class GroupsTest(DBTestCase):
 
     def test_groups(self):
         expected = [
-            {'group_id': 'abcdef',
+            {'groupId': 'abcdef',
              'webhook': '/a_webhook'},
-            {'group_id': 'fedcba',
+            {'groupId': 'fedcba',
              'webhook': '/another_webhook'}
         ]
 
@@ -92,17 +92,17 @@ class ServersTest(DBTestCase):
 
     def test_servers(self):
         expected = [
-            {'id': 1,
-             'group_id': 'abcdef',
+            {'serverId': 1,
+             'groupId': 'abcdef',
              'state': 'left'},
-            {'id': 2,
-             'group_id': 'fedcba',
+            {'serverId': 2,
+             'groupId': 'fedcba',
              'state': 'right'},
         ]
 
-        def _query(*args, **kwargs):
+        def execute(*args, **kwargs):
             return defer.succeed(expected)
-        self.db.query.side_effect = _query
+        self.client.execute.side_effect = execute
 
         request = BobbyDummyRequest('/servers')
         d = views.servers(request)
@@ -111,8 +111,8 @@ class ServersTest(DBTestCase):
             result = json.loads(request.written[0])
             self.assertEqual(result, expected)
 
-            self.db.query.assert_called_once_with(
-                'SELECT id, group_id, state FROM SERVERS;')
+            self.client.execute.assert_called_once_with(
+                'SELECT * FROM SERVERS;', {}, 1)
         return d.addCallback(_assert)
 
     def test_group_server_update(self):
