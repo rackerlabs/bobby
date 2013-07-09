@@ -31,10 +31,6 @@ class DBTestCase(unittest.TestCase):
         self.addCleanup(client_patcher.stop)
         self.client = client_patcher.start()
 
-        db_patcher = mock.patch('bobby.views.db', spec=['query'])
-        self.addCleanup(db_patcher.stop)
-        self.db = db_patcher.start()
-
 
 class GroupsTest(DBTestCase):
     '''Test /groups.'''
@@ -63,27 +59,31 @@ class GroupsTest(DBTestCase):
         return d.addCallback(_assert)
 
     def test_group_update(self):
-        self.db.query.return_value = defer.succeed(None)
+        self.client.execute.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/groups/0', content='webhook=/a')
         request.method = 'PUT'
         d = views.group_update(request, 0)
 
         def _assert(_):
-            self.db.query.assert_called_once_with(
-                'INSERT INTO GROUPS ("group_id", "webhook") VALUES ("0","/a");')
+            self.client.execute.assert_called_once_with(
+                'INSERT INTO groups ("groupId", "webhook") VALUES (:groupId, :webhook);',
+                {'webhook': '/a', 'groupId': 0},
+                1)
         return d.addCallback(_assert)
 
     def test_group_delete(self):
-        self.db.query.return_value = defer.succeed(None)
+        self.client.execute.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/groups/0')
         request.method = 'DELETE'
         d = views.group_delete(request, 0)
 
         def _assert(_):
-            self.db.query.assert_called_once_with(
-                'DELETE FROM GROUPS WHERE group_id = 0;')
+            self.client.execute.assert_called_once_with(
+                'DELETE FROM groups WHERE "groupId"=:groupId;',
+                {'webhook': None, 'groupId': 0},
+                1)
         return d.addCallback(_assert)
 
 
@@ -116,31 +116,35 @@ class ServersTest(DBTestCase):
         return d.addCallback(_assert)
 
     def test_group_server_update(self):
-        self.db.query.return_value = defer.succeed(None)
+        self.client.execute.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/groups/0/servers/1')
         request.method = 'PUT'
         d = views.group_server_update(request, "group-a", "server-b")
 
         def _assert(_):
-            self.db.query.assert_called_once_with(
-                'INSERT INTO SERVERS ("id", "group_id", "state") VALUES ("group-a", "server-b", "0");')
+            self.client.execute.assert_called_once_with(
+                'INSERT INTO servers ("serverId", "groupId", "state") VALUES (:serverId, :groupId, :webhook);',
+                {'serverId': 'server-b', 'groupId': 'group-a', 'state': 'OK'},
+                1)
         return d.addCallback(_assert)
 
     def test_group_server_delete(self):
-        self.db.query.return_value = defer.succeed(None)
+        self.client.execute.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/groups/0/servers/1')
         request.method = 'DELETE'
         d = views.group_server_delete(request, 0, 1)
 
         def _assert(_):
-            self.db.query.assert_called_once_with(
-                'DELETE FROM SERVERS WHERE id = 1;')
+            self.client.execute.assert_called_once_with(
+                'DELETE FROM servers WHERE "serverId"=:serverId;',
+                {'serverId': 1},
+                1)
         return d.addCallback(_assert)
 
     def test_group_server_webhook(self):
-        self.db.query.return_value = defer.succeed(None)
+        self.client.execute.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/groups/0/servers/1/webhook')
         request.method = 'POST'
@@ -148,6 +152,8 @@ class ServersTest(DBTestCase):
         d = views.group_server_webhook(request, 0, 1)
 
         def _assert(_):
-            self.db.query.assert_called_once_with(
-                'UPDATE SERVERS SET state="False" WHERE id="1";')
+            self.client.execute.assert_called_once_with(
+                'UPDATE servers SET "state"=:state WHERE "serverId"=:serverId AND "groupId"=:groupId;',
+                {'serverId': 1, 'groupId': 0, 'state': False},
+                1)
         return d.addCallback(_assert)
