@@ -27,6 +27,10 @@ class BobbyDummyRequest(DummyRequest):
 class DBTestCase(unittest.TestCase):
 
     def setUp(self):
+        client_patcher = mock.patch('bobby.views.client', spec=['execute'])
+        self.addCleanup(client_patcher.stop)
+        self.client = client_patcher.start()
+
         db_patcher = mock.patch('bobby.views.db', spec=['query'])
         self.addCleanup(db_patcher.stop)
         self.db = db_patcher.start()
@@ -43,9 +47,9 @@ class GroupsTest(DBTestCase):
              'webhook': '/another_webhook'}
         ]
 
-        def _query(*args, **kwargs):
+        def _execute(*args, **kwargs):
             return defer.succeed(expected)
-        self.db.query.side_effect = _query
+        self.client.execute.side_effect = _execute
 
         request = BobbyDummyRequest('/groups')
         d = views.groups(request)
@@ -54,8 +58,8 @@ class GroupsTest(DBTestCase):
             result = json.loads(request.written[0])
             self.assertEqual(result, expected)
 
-            self.db.query.assert_called_once_with(
-                'SELECT group_id, webhook FROM GROUPS;')
+            self.client.execute.assert_called_once_with(
+                'SELECT * FROM GROUPS;', {}, 1)
         return d.addCallback(_assert)
 
     def test_group_update(self):

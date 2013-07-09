@@ -6,7 +6,7 @@ from bobby.views import app
 
 
 application = service.Application('dammit Bobby')
-server = strports.service('tcp:8080', server.Site(app.resource()))
+server = strports.service('tcp:9876', server.Site(app.resource()))
 
 def db_ready(_):
     server.setServiceParent(application)

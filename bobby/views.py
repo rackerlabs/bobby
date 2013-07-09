@@ -2,16 +2,24 @@ import json
 from urlparse import parse_qs
 
 from klein import Klein
+from silverberg.client import CQLClient
+from twisted.internet import endpoints, reactor
 
 from bobby.db import SqlitePool
+from bobby.models import Group, Server
 
 app = Klein()
 db = SqlitePool('bobby.sqlite')
+client = CQLClient(
+    endpoints.clientFromString(
+        reactor,
+        "tcp:{0}:{1}".format('localhost', 9160)),
+    'bobby')
 
 
 @app.route('/groups')
 def groups(request):
-    d = db.query('SELECT group_id, webhook FROM GROUPS;')
+    d = Group.all(client)
 
     def _return_result(result):
         request.write(json.dumps(result))
@@ -21,7 +29,7 @@ def groups(request):
 
 @app.route('/servers')
 def servers(request):
-    d = db.query('SELECT id, group_id, state FROM SERVERS;')
+    d = Server.all(client)
 
     def _return_result(result):
         request.write(json.dumps(result))
