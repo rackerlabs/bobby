@@ -6,6 +6,9 @@ SCRIPTSDIR=scripts
 run:
 	twistd -n -y app.tac
 
+test:
+	trial bobby.tests
+
 schema: FORCE schema-setup schema-teardown
 
 schema-setup:
