@@ -24,16 +24,24 @@ class BobbyDummyRequest(DummyRequest):
         self.content = BobbyDummyContent(content)
 
 
-class DBTestCase(unittest.TestCase):
+class GroupsTest(unittest.TestCase):
+    '''Test /groups.'''
 
     def setUp(self):
-        client_patcher = mock.patch('bobby.views.client', spec=['execute'])
+        # Ew. Need to move that client connection out of views soon.
+        client_patcher = mock.patch('bobby.views.client')
         self.addCleanup(client_patcher.stop)
         self.client = client_patcher.start()
 
+        Group_patcher = mock.patch('bobby.views.Group')
+        self.addCleanup(Group_patcher.stop)
+        self.Group = Group_patcher.start()
 
-class GroupsTest(DBTestCase):
-    '''Test /groups.'''
+        self.group = mock.MagicMock(spec=['delete', 'save'])
+        self.group.delete.return_value = defer.succeed(None)
+        self.group.save.return_value = defer.succeed(None)
+
+        self.Group.return_value = self.group
 
     def test_groups(self):
         expected = [
@@ -42,11 +50,7 @@ class GroupsTest(DBTestCase):
             {'groupId': 'fedcba',
              'webhook': '/another_webhook'}
         ]
-
-        def _execute(*args, **kwargs):
-            return defer.succeed(expected)
-        self.client.execute.side_effect = _execute
-
+        self.Group.all = mock.MagicMock(return_value=defer.succeed(expected))
         request = BobbyDummyRequest('/groups')
         d = views.groups(request)
 
@@ -54,41 +58,46 @@ class GroupsTest(DBTestCase):
             result = json.loads(request.written[0])
             self.assertEqual(result, expected)
 
-            self.client.execute.assert_called_once_with(
-                'SELECT * FROM GROUPS;', {}, 1)
+            self.Group.all.assert_called_once_with(self.client)
         return d.addCallback(_assert)
 
     def test_group_update(self):
-        self.client.execute.return_value = defer.succeed(None)
-
         request = BobbyDummyRequest('/groups/0', content='webhook=/a')
         request.method = 'PUT'
         d = views.group_update(request, 0)
 
         def _assert(_):
-            self.client.execute.assert_called_once_with(
-                'INSERT INTO groups ("groupId", "webhook") VALUES (:groupId, :webhook);',
-                {'webhook': '/a', 'groupId': 0},
-                1)
+            self.group.save.assert_called_once_with()
         return d.addCallback(_assert)
 
     def test_group_delete(self):
-        self.client.execute.return_value = defer.succeed(None)
-
         request = BobbyDummyRequest('/groups/0')
         request.method = 'DELETE'
         d = views.group_delete(request, 0)
 
         def _assert(_):
-            self.client.execute.assert_called_once_with(
-                'DELETE FROM groups WHERE "groupId"=:groupId;',
-                {'webhook': None, 'groupId': 0},
-                1)
+            self.group.delete.assert_called_once_with()
         return d.addCallback(_assert)
 
 
-class ServersTest(DBTestCase):
+class ServersTest(unittest.TestCase):
     '''Test /servers'''
+
+    def setUp(self):
+        # Ew. Need to move that client connection out of views soon.
+        client_patcher = mock.patch('bobby.views.client')
+        self.addCleanup(client_patcher.stop)
+        self.client = client_patcher.start()
+
+        Server_patcher = mock.patch('bobby.views.Server')
+        self.addCleanup(Server_patcher.stop)
+        self.Server = Server_patcher.start()
+
+        self.server = mock.MagicMock(spec=['delete', 'save', 'update'])
+        self.server.delete.return_value = defer.succeed(None)
+        self.server.save.return_value = defer.succeed(None)
+
+        self.Server.return_value = self.server
 
     def test_servers(self):
         expected = [
@@ -99,10 +108,7 @@ class ServersTest(DBTestCase):
              'groupId': 'fedcba',
              'state': 'right'},
         ]
-
-        def execute(*args, **kwargs):
-            return defer.succeed(expected)
-        self.client.execute.side_effect = execute
+        self.Server.all = mock.MagicMock(return_value=defer.succeed(expected))
 
         request = BobbyDummyRequest('/servers')
         d = views.servers(request)
@@ -111,49 +117,33 @@ class ServersTest(DBTestCase):
             result = json.loads(request.written[0])
             self.assertEqual(result, expected)
 
-            self.client.execute.assert_called_once_with(
-                'SELECT * FROM SERVERS;', {}, 1)
+            self.Server.all.assert_called_once_with(self.client)
         return d.addCallback(_assert)
 
     def test_group_server_update(self):
-        self.client.execute.return_value = defer.succeed(None)
-
         request = BobbyDummyRequest('/groups/0/servers/1')
         request.method = 'PUT'
         d = views.group_server_update(request, "group-a", "server-b")
 
         def _assert(_):
-            self.client.execute.assert_called_once_with(
-                'INSERT INTO servers ("serverId", "groupId", "state") VALUES (:serverId, :groupId, :webhook);',
-                {'serverId': 'server-b', 'groupId': 'group-a', 'state': 'OK'},
-                1)
+            self.server.save.assert_called_once_with()
         return d.addCallback(_assert)
 
     def test_group_server_delete(self):
-        self.client.execute.return_value = defer.succeed(None)
-
         request = BobbyDummyRequest('/groups/0/servers/1')
         request.method = 'DELETE'
         d = views.group_server_delete(request, 0, 1)
 
         def _assert(_):
-            self.client.execute.assert_called_once_with(
-                'DELETE FROM servers WHERE "serverId"=:serverId;',
-                {'serverId': 1},
-                1)
+            self.server.delete.assert_called_once_with()
         return d.addCallback(_assert)
 
     def test_group_server_webhook(self):
-        self.client.execute.return_value = defer.succeed(None)
-
         request = BobbyDummyRequest('/groups/0/servers/1/webhook')
         request.method = 'POST'
         request.args['state'] = ['OK']
         d = views.group_server_webhook(request, 0, 1)
 
         def _assert(_):
-            self.client.execute.assert_called_once_with(
-                'UPDATE servers SET "state"=:state WHERE "serverId"=:serverId AND "groupId"=:groupId;',
-                {'serverId': 1, 'groupId': 0, 'state': False},
-                1)
+            self.server.update.assert_called_once_with()
         return d.addCallback(_assert)
