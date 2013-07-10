@@ -25,16 +25,6 @@ def groups(request):
     return d.addCallback(_return_result)
 
 
-@app.route('/servers')
-def servers(request):
-    d = Server.all(client)
-
-    def _return_result(result):
-        request.write(json.dumps(result))
-        request.finish()
-    return d.addCallback(_return_result)
-
-
 @app.route('/groups/<string:group_id>', methods=['PUT'])
 def group_update(request, group_id):
     params = parse_qs(request.content.read())
@@ -79,9 +69,15 @@ def group_server_webhook(request, group_id, server_id):
     state = (not request.args.get('state')[0] == 'OK')
     server = Server(server_id, group_id, state, client)
     d = server.update()
-    #d = db.query('UPDATE SERVERS SET state="{0}" WHERE id="{1}";'.format(
-    #    state, server_id))
 
-    def _return_ok(_):
+    return d.addCallback(lambda _: request.finish())
+
+
+@app.route('/servers')
+def servers(request):
+    d = Server.all(client)
+
+    def _return_result(result):
+        request.write(json.dumps(result))
         request.finish()
-    return d.addCallback(_return_ok)
+    return d.addCallback(_return_result)
