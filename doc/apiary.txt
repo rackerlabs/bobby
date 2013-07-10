@@ -1,0 +1,74 @@
+-- Group resources --
+List all groups.
+GET /groups
+> Accept: application/json
+< 200
+< Content-Type: application/json
+[
+    {
+        webhook: "http://www.example.com/webhook",
+        groupId: "1"
+    }
+]
+
+Create a new group
+PUT /groups/{groupId}
+> Accept: application/json
+{
+    webhook: "http://www.example.com/webhook"
+}
+< 201
+< Content-Type: application/json
+{
+    webhook: "http://www.example.com/webhook",
+    groupId: "{groupId}"
+}
+
+Delete a group
+DELETE /groups/{groupId}
+< 204
+< Content-Type: application/json
+
+Create a new server, and associate it with a group.
+PUT /groups/{groupId}/servers/{serverId}
+> Accept: application/json
+< 201
+< Content-Type: application/json
+{
+    serverId: "{serverId}",
+    groupId: "{groupId}",
+    state: "OK"
+}
+
+Delete a server from within a group.
+DELETE /groups/{groupId}/servers/{serverId}
+< 204
+< Content-Type: application/json
+
+Transition state of a server from Ok to Critical and back.
+POST /groups/{groupId}/servers/{serverId}/webhook
+> Accept: application/json
+{
+    state: "{state}"
+}
+< 201
+< Content-Type: application/json
+{
+    serverId: "{serverId}",
+    groupId: "{groupId}",
+    state: "{state}"
+}
+
+-- Server resources --
+List all servers
+GET /servers
+> Accept: application/json
+< 200
+< Content-Type: application/json
+[
+    {
+        serverId: "2",
+        groupId: "10",
+        state: "OK"
+    }
+]
