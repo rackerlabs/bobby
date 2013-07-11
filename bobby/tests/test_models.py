@@ -115,50 +115,31 @@ class ServerTestCase(DBTestCase):
         d.addCallback(_assert)
         return d
 
-    def test_save(self):
-        def execute(*args, **kwargs):
-            return defer.succeed(None)
-        self.client.execute.side_effect = execute
+    def test_new(self):
+        self.client.execute.return_value = defer.succeed(None)
 
-        server = models.Server('x', 'y', 'OK', self.client)
-        d = server.save()
+        d = models.Server.new(self.client, 'server-a', 'entity-b', 'group-c')
 
-        def _assert(_):
+        def _assert(result):
             self.client.execute.assert_called_once_with(
-                'INSERT INTO servers ("serverId", "groupId", "state") VALUES (:serverId, :groupId, :webhook);',
-                {'serverId': 'x', 'groupId': 'y', 'state': 'OK'},
+                'INSERT INTO server ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);',
+                {'serverId': 'server-a', 'entityId': 'entity-b', 'groupId': 'group-c'},
                 1)
-        d.addCallback(_assert)
-        return d
+            self.assertTrue(isinstance(result, models.Server))
+        return d.addCallback(_assert)
 
     def test_delete(self):
         def execute(*args, **kwargs):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        server = models.Server('x', 'y', 'OK', self.client)
+        server = models.Server(self.client, 'server-z', 'entity-y', 'group-x')
         d = server.delete()
 
         def _assert(_):
             self.client.execute.assert_called_once_with(
-                'DELETE FROM servers WHERE "serverId"=:serverId;',
-                {'serverId': 'x'},
-                1)
-        d.addCallback(_assert)
-        return d
-
-    def test_update(self):
-        def execute(*args, **kwargs):
-            return defer.succeed(None)
-        self.client.execute.side_effect = execute
-
-        server = models.Server('x', 'y', 'OK', self.client)
-        d = server.update()
-
-        def _assert(_):
-            self.client.execute.assert_called_once_with(
-                'UPDATE servers SET "state"=:state WHERE "serverId"=:serverId AND "groupId"=:groupId;',
-                {'serverId': 'x', 'groupId': 'y', 'state': 'OK'},
+                'DELETE FROM servers WHERE "serverId"=:serverId AND "groupId"=:groupId;',
+                {'serverId': 'server-z', 'groupId': 'group-x'},
                 1)
         d.addCallback(_assert)
         return d

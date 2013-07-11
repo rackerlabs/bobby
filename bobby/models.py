@@ -54,6 +54,7 @@ class Group(object):
             to_set.append(('notification_plan', notification_plan))
         fields = ['"{0}"'.format(field) for field, val in to_set]
         values = [':{0}'.format(field) for field, val in to_set]
+
         query = 'INSERT INTO groups ({0}) VALUES ({1});'.format(
             ", ".join(fields), ", ".join(values))
 
@@ -74,39 +75,47 @@ class Group(object):
 
 
 class Server(object):
-    """A Cassandra model representing a server."""
+    """A Cassandra model representing a server.
 
-    server_id = None
-    group_id = None
-    state = None
+    :ivar server_id: The nova instance id.
+    :ivar server_id: ``str``
 
-    def __init__(self, server_id, group_id, state, client):
-        self.server_id = server_id
-        self.group_id = group_id
-        self.state = state
+    :ivar entity_id: The MaaS entity id.
+    :ivar entity_id: ``str``
 
+    :ivar group_id: The group that owns this server.
+    :ivar group_id: ``str``
+    """
+
+    def __init__(self, client, server_id, entity_id, group_id):
         self._client = client
 
-    def save(self):
-        query = 'INSERT INTO servers ("serverId", "groupId", "state") VALUES (:serverId, :groupId, :webhook);'
-        return self._client.execute(query,
-                                    {'serverId': self.server_id,
-                                     'groupId': self.group_id,
-                                     'state': self.state},
-                                    ConsistencyLevel.ONE)
+        self.server_id = server_id
+        # Do we have the entity id immediately?
+        self.entity_id = entity_id
+        self.group_id = group_id
 
     def delete(self):
-        query = 'DELETE FROM servers WHERE "serverId"=:serverId;'
-        return self._client.execute(query, {'serverId': self.server_id},
-                                    ConsistencyLevel.ONE)
-
-    def update(self):
-        query = 'UPDATE servers SET "state"=:state WHERE "serverId"=:serverId AND "groupId"=:groupId;'
+        # TODO: also delete the entity in MaaS
+        query = 'DELETE FROM servers WHERE "serverId"=:serverId AND "groupId"=:groupId;'
         return self._client.execute(query,
                                     {'serverId': self.server_id,
-                                     'groupId': self.group_id,
-                                     'state': self.state},
+                                     'groupId': self.group_id},
                                     ConsistencyLevel.ONE)
+
+    @classmethod
+    def new(Class, client, server_id, entity_id, group_id):
+        query = 'INSERT INTO server ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
+
+        d = client.execute(query,
+                           {'serverId': server_id,
+                            'entityId': entity_id,
+                            'groupId': group_id},
+                           ConsistencyLevel.ONE)
+
+        def create_server(result):
+            return defer.succeed(Class(client, server_id, entity_id, group_id))
+        return d.addCallback(create_server)
 
     @staticmethod
     def all(client):
