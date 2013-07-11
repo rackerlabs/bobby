@@ -1,3 +1,6 @@
 *.pyc
 bobby.sqlite
 env
+_trial_temp
+schema/setup-*.cql
+schema/teardown-*.cql
