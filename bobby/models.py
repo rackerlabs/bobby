@@ -127,16 +127,16 @@ class Policy(object):
     """A representation of an otter scaling policy.
 
     :ivar policyId: An otter scaling policy id.
-    :ivar policyId: ``str``
+    :type policyId: ``str``
 
     :ivar groupId: The group that owns this policy
-    :ivar groupId: ``str``
+    :type groupId: ``str``
 
     :ivar alarmTemplateId: The alarm template to apply to member servers.
-    :ivar alarmTemplateId: ``str``
+    :type alarmTemplateId: ``str``
 
     :ivar checkTemplateId: The check template to apply to member servers.
-    :ivar checkTemplateId: ``str``
+    :type checkTemplateId: ``str``
     """
 
     def __init__(self, client, policy_id, group_id, alarm_template_id, check_template_id):
@@ -172,4 +172,61 @@ class Policy(object):
         return self._client.execute(query,
                                     {'policyId': self.policy_id,
                                      'groupId': self.group_id},
+                                    ConsistencyLevel.ONE)
+
+
+class ServerPolicy(object):
+    """A server policy state representation.
+
+    :ivar serverId: The server id.
+    :type serverId: ``str``
+
+    :ivar policyId: The policy id.
+    :type policyId: ``str``
+
+    :ivar alarmId: The alarm id.
+    :type alarmId: ``str``
+
+    :ivar checkId: The check id.
+    :type checkId: ``str``
+
+    :ivar state: The server state; either "OK" or "Critical"
+    :type state: ``str``
+    """
+
+    def __init__(self, client, server_id, policy_id, alarm_id, check_id, state):
+        self._client = client
+
+        self.server_id = server_id
+        self.policy_id = policy_id
+        self.alarm_id = alarm_id
+        self.check_id = check_id
+        self.state = state
+
+    @classmethod
+    def new(Class, client, server_id, policy_id, alarm_id, check_id, state):
+        query = " ".join((
+            'INSERT INTO serverpolicy ("serverId", "policyId", "alarmTemplateId", "checkTemplateId", "state")',
+            'VALUES (:serverId, :policyId, :alarmTemplateId, :checkTemplateId, :state);'
+        ))
+
+        d = client.execute(query,
+                           {'serverId': server_id,
+                            'policyId': policy_id,
+                            'alarmId': alarm_id,
+                            'checkId': check_id,
+                            'state': state},
+                           ConsistencyLevel.ONE)
+
+        def create_serverpolicy(_):
+            return defer.succeed(
+                Class(client, server_id, policy_id, alarm_id, check_id, state))
+        return d.addCallback(create_serverpolicy)
+
+    def delete(self):
+        query = 'DELETE FROM serverpolicy WHERE "serverId"=:serverId AND "policyId"=:policyId;'
+
+        return self._client.execute(query,
+                                    {'serverId': self.server_id,
+                                     'policyId': self.policy_id},
                                     ConsistencyLevel.ONE)

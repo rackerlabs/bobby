@@ -153,7 +153,7 @@ class PolicyTestCase(DBTestCase):
 
         d = models.Policy.new(self.client, 'policy-a', 'group-b', 'alarm-c', 'check-d')
 
-        def _assert(_):
+        def _assert(result):
             query = ' '.join((
                 'INSERT INTO policy ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
                 'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);',
@@ -161,10 +161,10 @@ class PolicyTestCase(DBTestCase):
 
             self.client.execute.assert_called_once_with(
                 query,
-                {'alarmTemplateId': 'alarm-c', 'checkTemplateId':
-                    'check-d', 'policyId': 'policy-a', 'groupId':
-                    'group-b'}, 1
-            )
+                {'alarmTemplateId': 'alarm-c', 'checkTemplateId': 'check-d',
+                 'policyId': 'policy-a', 'groupId': 'group-b'},
+                1)
+            self.assertTrue(isinstance(result, models.Policy))
         return d.addCallback(_assert)
 
     def test_delete(self):
@@ -179,6 +179,44 @@ class PolicyTestCase(DBTestCase):
             self.client.execute.assert_called_once_with(
                 'DELETE FROM policy WHERE "policyId"=:policyId AND "groupId"=:groupId;',
                 {'policyId': 'policy-z', 'groupId': 'group-y'},
+                1)
+        d.addCallback(_assert)
+        return d
+
+
+class ServerPolicyTestCase(DBTestCase):
+    '''Tests for bobby.models.ServerPolicy.'''
+
+    def test_new(self):
+        self.client.execute.return_value = defer.succeed(None)
+
+        d = models.ServerPolicy.new(self.client, 'server-a', 'policy-b', 'alarm-c', 'check-d', 'OK')
+
+        def _assert(result):
+            query = ' '.join((
+                'INSERT INTO serverpolicy ("serverId", "policyId", "alarmTemplateId", "checkTemplateId", "state")',
+                'VALUES (:serverId, :policyId, :alarmTemplateId, :checkTemplateId, :state);'
+            ))
+
+            self.client.execute.assert_called_once_with(
+                query,
+                {'checkId': 'check-d', 'serverId': 'server-a', 'state': 'OK',
+                 'policyId': 'policy-b', 'alarmId': 'alarm-c'},
+                1)
+        return d.addCallback(_assert)
+
+    def test_delete(self):
+        def execute(*args, **kwargs):
+            return defer.succeed(None)
+        self.client.execute.side_effect = execute
+
+        server_policy = models.ServerPolicy(self.client, 'server-z', 'policy-y', 'alarm-x', 'check-w', 'OK')
+        d = server_policy.delete()
+
+        def _assert(_):
+            self.client.execute.assert_called_once_with(
+                'DELETE FROM serverpolicy WHERE "serverId"=:serverId AND "policyId"=:policyId;',
+                {'serverId': 'server-z', 'policyId': 'policy-y'},
                 1)
         d.addCallback(_assert)
         return d
