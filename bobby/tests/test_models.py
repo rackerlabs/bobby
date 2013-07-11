@@ -10,9 +10,6 @@ from bobby import models
 class DBTestCase(unittest.TestCase):
 
     def setUp(self):
-        #client_patcher = mock.patch('bobby.views.client', spec=['execute'])
-        #self.addCleanup(client_patcher.stop)
-        #self.client = client_patcher.start()
         self.client = mock.create_autospec(CQLClient)
 
 
@@ -35,35 +32,62 @@ class GroupTestCase(DBTestCase):
         d.addCallback(_assert)
         return d
 
-    def test_save(self):
-        def execute(*args, **kwargs):
-            return defer.succeed(None)
-        self.client.execute.side_effect = execute
+    def test_new(self):
+        self.client.execute.return_value = defer.succeed(None)
 
-        group = models.Group('x', 'y', self.client)
-        d = group.save()
+        d = models.Group.new(self.client, 'group-b', 'tenant-a')
 
-        def _assert(_):
+        def _assert(result):
             self.client.execute.assert_called_once_with(
-                'INSERT INTO groups ("groupId", "webhook") VALUES (:groupId, :webhook);',
-                {'webhook': 'y', 'groupId': 'x'},
+                'INSERT INTO groups ("groupId", "tenantId") VALUES (:groupId, :tenantId);',
+                {'groupId': 'group-b', 'tenantId': 'tenant-a'},
                 1)
-        d.addCallback(_assert)
-        return d
+            self.assertTrue(isinstance(result, models.Group))
+        return d.addCallback(_assert)
 
     def test_delete(self):
         def execute(*args, **kwargs):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        group = models.Group('x', 'y', self.client)
+        group = models.Group(self.client, 'group-x', 'tenant-y')
         d = group.delete()
 
         def _assert(_):
             self.client.execute.assert_called_once_with(
-                'DELETE FROM groups WHERE "groupId"=:groupId;',
-                {'webhook': 'y', 'groupId': 'x'},
+                'DELETE FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;',
+                {'tenantId': 'tenant-y', 'groupId': 'group-x'},
                 1)
+        d.addCallback(_assert)
+        return d
+
+    def test_view_notification(self):
+        self.client.execute.return_value = defer.succeed('notification-abcdef')
+
+        group = models.Group(self.client, 'group-x', 'tenant-y')
+        d = group.view_notification()
+
+        def _assert(result):
+            self.client.execute.assert_called_once_with(
+                'SELECT notification FROM groups WHERE "groupId"=:groupId AND"tenantId"=:tenantId',
+                {'groupId': 'group-x', 'tenantId': 'tenant-y'},
+                1)
+            self.assertEqual(result, 'notification-abcdef')
+        d.addCallback(_assert)
+        return d
+
+    def test_view_notification_plan(self):
+        self.client.execute.return_value = defer.succeed('plan-fedcba')
+
+        group = models.Group(self.client, 'group-x', 'tenant-y')
+        d = group.view_notification_plan()
+
+        def _assert(result):
+            self.client.execute.assert_called_once_with(
+                'SELECT notificationPlan FROM groups WHERE "groupId"=:groupId AND"tenantId"=:tenantId',
+                {'groupId': 'group-x', 'tenantId': 'tenant-y'},
+                1)
+            self.assertEqual(result, 'plan-fedcba')
         d.addCallback(_assert)
         return d
 
