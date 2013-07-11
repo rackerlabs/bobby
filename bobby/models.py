@@ -121,3 +121,55 @@ class Server(object):
     def all(client):
         query = 'SELECT * FROM SERVERS;'
         return client.execute(query, {}, ConsistencyLevel.ONE)
+
+
+class Policy(object):
+    """A representation of an otter scaling policy.
+
+    :ivar policyId: An otter scaling policy id.
+    :ivar policyId: ``str``
+
+    :ivar groupId: The group that owns this policy
+    :ivar groupId: ``str``
+
+    :ivar alarmTemplateId: The alarm template to apply to member servers.
+    :ivar alarmTemplateId: ``str``
+
+    :ivar checkTemplateId: The check template to apply to member servers.
+    :ivar checkTemplateId: ``str``
+    """
+
+    def __init__(self, client, policy_id, group_id, alarm_template_id, check_template_id):
+        self._client = client
+
+        self.policy_id = policy_id
+        self.group_id = group_id
+        self.alarm_template_id = alarm_template_id
+        self.check_template_id = check_template_id
+
+    @classmethod
+    def new(Class, client, policy_id, group_id, alarm_template_id, check_template_id):
+        query = " ".join((
+            'INSERT INTO policy ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
+            'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);'
+        ))
+
+        d = client.execute(query,
+                           {'policyId': policy_id,
+                            'groupId': group_id,
+                            'alarmTemplateId': alarm_template_id,
+                            'checkTemplateId': check_template_id},
+                           ConsistencyLevel.ONE)
+
+        def create_policy_object(_):
+            return defer.succeed(
+                Class(client, policy_id, group_id, alarm_template_id, check_template_id))
+        return d.addCallback(create_policy_object)
+
+    def delete(self):
+        query = 'DELETE FROM policy WHERE "policyId"=:policyId AND "groupId"=:groupId;'
+
+        return self._client.execute(query,
+                                    {'policyId': self.policy_id,
+                                     'groupId': self.group_id},
+                                    ConsistencyLevel.ONE)
