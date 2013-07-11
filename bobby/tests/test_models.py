@@ -144,6 +144,21 @@ class ServerTestCase(DBTestCase):
         d.addCallback(_assert)
         return d
 
+    def test_view_policies(self):
+        def execute(*args, **kwargs):
+            return defer.succeed(None)
+        self.client.execute.side_effect = execute
+
+        server = models.Server(self.client, 'server-l', 'entity-m', 'group-n')
+        d = server.view_policies()
+
+        def _assert(_):
+            self.client.execute.assert_called_once_with(
+                'SELECT * FROM serverpolicy WHERE "serverId"=:serverId AND "groupId"=:groupId;',
+                {'serverId': 'server-l', 'groupId': 'group-n'},
+                1)
+        return d.addCallback(_assert)
+
 
 class PolicyTestCase(DBTestCase):
     '''Tests for bobby.models.Policy.'''

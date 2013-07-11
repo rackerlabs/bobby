@@ -103,6 +103,13 @@ class Server(object):
                                      'groupId': self.group_id},
                                     ConsistencyLevel.ONE)
 
+    def view_policies(self):
+        query = 'SELECT * FROM serverpolicy WHERE "serverId"=:serverId AND "groupId"=:groupId;'
+        return self._client.execute(query,
+                                    {'serverId': self.server_id,
+                                     'groupId': self.group_id},
+                                    ConsistencyLevel.ONE)
+
     @classmethod
     def new(Class, client, server_id, entity_id, group_id):
         query = 'INSERT INTO server ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
