@@ -1,3 +1,59 @@
+--- Rackspace Autoscaling/Monitoring Bridge ---
+
+--
+Group Resource
+Groups representing Autoscaling groups correlating to a group of monitored
+servers. (/tenantId/groups)
+--
+List all the server groups for a given tenant ID.
+GET /{tenantId}/groups
+< 200
+< Content-Type: application/json
+{
+    "groups": [
+        {
+            "groupId": "{groupId1}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId1}",
+                    "rel": "self"
+                }
+            ]
+            "webhook": "http://example.com/webhook1"
+        },
+        {
+            "groupId": "{groupId2}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId2}",
+                    "rel": "self"
+                }
+            ]
+            "webhook": "http://example.com/webhook2"
+        }
+    ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- Group resources --
 List all groups.
 GET /groups

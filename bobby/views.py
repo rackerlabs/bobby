@@ -15,6 +15,20 @@ client = CQLClient(
     'bobby')
 
 
+@app.route('/<string:tenant_id>/groups', methods=['GET'])
+def get_groups(request, tenant_id):
+    d = Group.get_by_tenant_id(tenant_id)
+
+    def _return_result(groups):
+        result = {'groups': groups}
+        request.write(json.dumps(result))
+        request.finish()
+    return d.addCallback(_return_result)
+
+
+# Below this line are old and busted
+
+
 @app.route('/groups')
 def groups(request):
     d = Group.all(client)

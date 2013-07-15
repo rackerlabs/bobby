@@ -25,6 +25,56 @@ class BobbyDummyRequest(DummyRequest):
 
 
 class GroupsTest(unittest.TestCase):
+    '''Test /{tenantId}/groups'''
+
+    def setUp(self):
+        # Ew. Need to move that client connection out of views soon.
+        client_patcher = mock.patch('bobby.views.client')
+        self.addCleanup(client_patcher.stop)
+        self.client = client_patcher.start()
+
+        Group_patcher = mock.patch('bobby.views.Group', spec=['get_by_tenant_id'])
+        self.addCleanup(Group_patcher.stop)
+        self.Group = Group_patcher.start()
+
+        self.group = mock.MagicMock(spec=['delete', 'save'])
+        self.group.delete.return_value = defer.succeed(None)
+        self.group.save.return_value = defer.succeed(None)
+
+        self.Group.return_value = self.group
+
+    def test_get_groups(self):
+        groups = [
+            {'groupId': 'abcdef',
+             'links': [
+                 {
+                     'href': '/101010/groups/abcdef',
+                     'rel': 'self'
+                 }
+             ],
+             'webhook': 'http://example.com/an_webhook1'
+             },
+            {'groupId': 'fedcba',
+             'links': [
+                 {
+                     'href': '/101010/groups/fedcba',
+                     'rel': 'self'
+                 }
+             ],
+             'webhook': 'http://example.com/an_webhook2'
+             }
+        ]
+        expected = {'groups': groups}
+        self.Group.get_by_tenant_id.return_value = defer.succeed(groups)
+        request = BobbyDummyRequest('/101010/groups')
+        d = views.get_groups(request, '101010')
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, expected)
+
+
+class GroupsTestOld(unittest.TestCase):
     '''Test /groups.'''
 
     def setUp(self):
@@ -80,7 +130,7 @@ class GroupsTest(unittest.TestCase):
         return d.addCallback(_assert)
 
 
-class ServersTest(unittest.TestCase):
+class ServersTestOld(unittest.TestCase):
     '''Test /servers'''
 
     def setUp(self):
