@@ -26,6 +26,29 @@ def get_groups(request, tenant_id):
     return d.addCallback(_return_result)
 
 
+@app.route('/<string:tenant_id>/groups', methods=['PUT'])
+def create_group(request, tenant_id):
+    group_id = request.args.get('groupId')[0]
+    group_webhook = request.args.get('webhook')[0]
+
+    d = Group.new(group_id, group_webhook)
+
+    def _serialize_object(group):
+        # XXX: the actual way to do this is using a json encoder. Not now.
+        json_object = {
+            'groupId': group.group_id,
+            'links': {
+                'href': '{0}{1}'.format(request.postpath, group.group_id),
+                'rel': 'self'
+            },
+            'webhook': group.webhook
+        }
+
+        request.write(json.dumps(json_object))
+        request.finish()
+    return d.addCallback(_serialize_object)
+
+
 # Below this line are old and busted
 
 

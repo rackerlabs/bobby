@@ -5,7 +5,7 @@ from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.web.test.requesthelper import DummyRequest
 
-from bobby import views
+from bobby import models, views
 
 
 class BobbyDummyContent(object):
@@ -33,14 +33,13 @@ class GroupsTest(unittest.TestCase):
         self.addCleanup(client_patcher.stop)
         self.client = client_patcher.start()
 
-        Group_patcher = mock.patch('bobby.views.Group', spec=['get_by_tenant_id'])
+        Group_patcher = mock.patch(
+            'bobby.views.Group',
+            spec=['get_by_tenant_id', 'new'])
         self.addCleanup(Group_patcher.stop)
         self.Group = Group_patcher.start()
 
-        self.group = mock.MagicMock(spec=['delete', 'save'])
-        self.group.delete.return_value = defer.succeed(None)
-        self.group.save.return_value = defer.succeed(None)
-
+        self.group = mock.create_autospec(models.Group)
         self.Group.return_value = self.group
 
     def test_get_groups(self):
@@ -72,6 +71,32 @@ class GroupsTest(unittest.TestCase):
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
+
+    def test_create_group(self):
+        group_data = {
+            'groupId': 'uvwxyz',
+            'links': {
+                'href': '/101010/groups/uvwxyz',
+                'rel': 'self'
+            },
+            'webhook': 'http://example.com/an_webhook'
+        }
+
+        group = mock.create_autospec(models.Group)
+        group.group_id = group_data['groupId']
+        group.webhook = group_data['webhook']
+        self.Group.new.return_value = defer.succeed(group)
+
+        request = BobbyDummyRequest('/101010/groups/')
+        request.method = 'POST'
+        request.args['groupId'] = [group_data['groupId']]
+        request.args['webhook'] = [group_data['webhook']]
+
+        d = views.create_group(request, 010101)
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, group_data)
 
 
 class GroupsTestOld(unittest.TestCase):

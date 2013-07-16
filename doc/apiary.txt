@@ -35,6 +35,27 @@ GET /{tenantId}/groups
 }
 
 
+Create a server group.
+POST /{tenantId}/groups
+> Accept: application/json
+{
+    "groupId": "{groupId1}",
+    "webhook": "http://example.com/{groupId1}/webhook"
+}
+< 201
+< Content-Type: application/json
+{
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
+            "rel": "self"
+        }
+    ]
+    "webhook": "http://example.com/{groupId}/webhook"
+}
+
+
 
 
 
