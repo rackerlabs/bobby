@@ -35,7 +35,7 @@ class GroupsTest(unittest.TestCase):
 
         Group_patcher = mock.patch(
             'bobby.views.Group',
-            spec=['get_by_group_id', 'get_by_tenant_id', 'new'])
+            spec=['get_by_group_id', 'get_all_by_tenant_id', 'new'])
         self.addCleanup(Group_patcher.stop)
         self.Group = Group_patcher.start()
 
@@ -64,7 +64,7 @@ class GroupsTest(unittest.TestCase):
              }
         ]
         expected = {'groups': groups}
-        self.Group.get_by_tenant_id.return_value = defer.succeed(groups)
+        self.Group.get_all_by_tenant_id.return_value = defer.succeed(groups)
         request = BobbyDummyRequest('/101010/groups')
         d = views.get_groups(request, '101010')
 

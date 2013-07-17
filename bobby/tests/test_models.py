@@ -16,22 +16,6 @@ class DBTestCase(unittest.TestCase):
 class GroupTestCase(DBTestCase):
     '''Tests for bobby.models.Group.'''
 
-    def test_all(self):
-        '''Group.all returns all the groups.'''
-        def execute(*args, **kwargs):
-            expected = [{'webhook': u'abcdef', 'groupId': '1'}]
-            return defer.succeed(expected)
-        self.client.execute.side_effect = execute
-
-        d = models.Group.all(self.client)
-
-        def _assert(result):
-            self.assertEqual(len(result), 1)
-            group = result[0]
-            self.assertEqual(group['webhook'], u'abcdef')
-        d.addCallback(_assert)
-        return d
-
     def test_new(self):
         self.client.execute.return_value = defer.succeed(None)
 
@@ -44,6 +28,16 @@ class GroupTestCase(DBTestCase):
                 1)
             self.assertTrue(isinstance(result, models.Group))
         return d.addCallback(_assert)
+
+    def test_get_all_by_tenant_id(self):
+        self.client.execute.return_value = defer.succeed(None)
+
+        d = models.Group.get_all_by_tenant_id(self.client, 'tenant-a')
+
+        self.successResultOf(d)
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM groups WHERE "tenantId"=:tenantId ALLOW FILTERING;',
+            {'tenantId': 'tenant-a'}, 1)
 
     def test_get_by_group_id(self):
         def execute(*args, **kwargs):

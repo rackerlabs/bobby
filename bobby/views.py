@@ -16,7 +16,7 @@ client = CQLClient(
 
 @app.route('/<string:tenant_id>/groups', methods=['GET'])
 def get_groups(request, tenant_id):
-    d = Group.get_by_tenant_id(tenant_id)
+    d = Group.get_all_by_tenant_id(client, tenant_id)
 
     def _return_result(groups):
         result = {'groups': groups}

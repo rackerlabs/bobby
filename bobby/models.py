@@ -44,6 +44,11 @@ class Group(object):
                                     ConsistencyLevel.ONE)
 
     @classmethod
+    def get_all_by_tenant_id(Class, client, tenant_id):
+        query = 'SELECT * FROM groups WHERE "tenantId"=:tenantId ALLOW FILTERING;'
+        return client.execute(query, {'tenantId': tenant_id}, ConsistencyLevel.ONE)
+
+    @classmethod
     def get_by_group_id(Class, client, tenant_id, group_id):
         query = 'SELECT * FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;'
         return client.execute(query,
@@ -75,11 +80,6 @@ class Group(object):
         def create_instance(result):
             return defer.succeed(Class(client, group_id, tenant_id))
         return d.addCallback(create_instance)
-
-    @staticmethod
-    def all(client):
-        query = 'SELECT * FROM GROUPS;'
-        return client.execute(query, {}, ConsistencyLevel.ONE)
 
 
 class Server(object):
