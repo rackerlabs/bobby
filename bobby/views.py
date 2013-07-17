@@ -4,7 +4,7 @@ from klein import Klein
 from silverberg.client import CQLClient
 from twisted.internet import endpoints, reactor
 
-from bobby.models import Group, Server
+from bobby.models import Group, Policy, Server
 
 app = Klein()
 client = CQLClient(
@@ -147,6 +147,83 @@ def delete_server(request, tenant_id, group_id, server_id):
     def delete_server(server):
         return server.delete()
     d.addCallback(delete_server)
+
+    def finish(_):
+        request.setResponseCode(204)
+        request.finish()
+    return d.addCallback(finish)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])
+def get_policies(request, tenant_id, group_id):
+    d = Policy.get_all_by_group_id(client, tenant_id, group_id)
+
+    def serialize(policies):
+        result = {'policies': policies}
+        request.write(json.dumps(result))
+        request.finish()
+    return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['PUT'])
+def create_policy(request, tenant_id, group_id):
+    alarm_template_id = request.args.get('alarmTemplateId')[0]
+    check_template_id = request.args.get('checkTemplateId')[0]
+    policy_id = request.args.get('policyId')[0]
+
+    d = Policy.new(client, policy_id, group_id, alarm_template_id, check_template_id)
+
+    def serialize(policy):
+        # XXX: the actual way to do this is using a json encoder. Not now.
+        json_object = {
+            'alarmTemplateId': policy.alarm_template_id,
+            'checkTemplateId': policy.check_template_id,
+            'groupId': policy.group_id,
+            'links': [
+                {
+                    'href': '{0}{1}'.format(request.postpath, policy.policy_id),
+                    'rel': 'self'
+                }
+            ],
+            'policyId': policy.policy_id
+        }
+
+        request.write(json.dumps(json_object))
+        request.finish()
+    return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['GET'])
+def get_policy(request, tenant_id, group_id, policy_id):
+    d = Policy.get_by_policy_id(client, tenant_id, group_id, policy_id)
+
+    def serialize(policy):
+        # XXX: the actual way to do this is using a json encoder. Not now.
+        json_object = {
+            'alarmTemplateId': policy.alarm_template_id,
+            'checkTemplateId': policy.check_template_id,
+            'groupId': policy.group_id,
+            'links': [
+                {
+                    'href': '{0}'.format(request.postpath),
+                    'rel': 'self'
+                }
+            ],
+            'policyId': policy.policy_id
+        }
+
+        request.write(json.dumps(json_object))
+        request.finish()
+    return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['DELETE'])
+def delete_policy(request, tenant_id, group_id, policy_id):
+    d = Policy.get_by_policy_id(client, tenant_id, group_id, policy_id)
+
+    def delete(policy):
+        return policy.delete()
+    d.addCallback(delete)
 
     def finish(_):
         request.setResponseCode(204)

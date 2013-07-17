@@ -160,4 +160,88 @@ DELETE /{tenantId}/groups/{groupId}/servers/{serverId}
 < Content-Type: application/json
 
 
+--
+Policy Resource
+Policies are references to autoscaling policies related to appropriate groups.
+--
+List all the policies for a given group ID.
+GET /{tenantId}/groups/{groupId}/policies
+< 200
+< Content-Type: application/json
+{
+    "policies": [
+        {
+            "alarmTemplateId": "{alarmTemplateId1}",
+            "checkTemplateId": "{checkTemplateId1}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId1}",
+                    "rel": "self"
+                }
+            ]
+            "policyId": "{policyId1}"
+        },
+        {
+            "alarmTemplateId": "{alarmTemplateId2}",
+            "checkTemplateId": "{checkTemplateId2}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId2}",
+                    "rel": "self"
+                }
+            ]
+            "policyId": "{policyId2}"
+        }
+    ]
+}
 
+
+Create a policy object.
+POST /{tenantId}/groups/{groupId}/policies
+> Accept: application/json
+{
+    "alarmTemplateId": "{alarmTemplateId}",
+    "checkTemplateId": "{checkTemplateId}",
+    "entityId": "{entityId}",
+    "policyId": "{serverId}"
+}
+< 201
+< Content-Type: application/json
+{
+    "alarmTemplateId": "{alarmTemplateId}",
+    "checkTemplateId": "{checkTemplateId}",
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId}",
+            "rel": "self"
+        }
+    ]
+    "policyId": "{policyId}"
+}
+
+
+Get a policy.
+GET /{tenantId}/groups/{groupId}/policies/{policyId}
+< 200
+< Content-Type: application/json
+{
+    "alarmTemplateId": "{alarmTemplateId}",
+    "checkTemplateId": "{checkTemplateId}",
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId}",
+            "rel": "self"
+        }
+    ]
+    "policyId": "{policyId}"
+}
+
+
+Delete a policy.
+DELETE /{tenantId}/groups/{groupId}/policies/{policyId}
+< 204
+< Content-Type: application/json

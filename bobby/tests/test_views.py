@@ -243,3 +243,130 @@ class ServersTest(unittest.TestCase):
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         self.server.delete.assert_called_once_with()
+
+
+class PoliciesTest(unittest.TestCase):
+    '''Test /{tenantId}/groups/{groupId}/servers'''
+
+    def setUp(self):
+        # Ew. Need to move that client connection out of views soon.
+        client_patcher = mock.patch('bobby.views.client')
+        self.addCleanup(client_patcher.stop)
+        self.client = client_patcher.start()
+
+        Policy_patcher = mock.patch(
+            'bobby.views.Policy',
+            spec=['get_all_by_group_id', 'get_by_policy_id', 'new'])
+        self.addCleanup(Policy_patcher.stop)
+        self.Policy = Policy_patcher.start()
+
+        self.policy = mock.create_autospec(models.Policy)
+        self.Policy.return_value = self.policy
+        self.Policy.get_by_policy_id.return_value = defer.succeed(self.policy)
+        self.Policy.new.return_value = defer.succeed(self.policy)
+
+    def test_get_policies(self):
+        policies = [
+            {
+                'alarmTemplateId': '{alarmTemplateId1}',
+                'checkTemplateId': '{checkTemplateId1}',
+                'groupId': '{groupId}',
+                'links': [
+                    {
+                        'href':
+                        '{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId1}',
+                        'rel': 'self'
+                    }
+                ],
+                'policyId': '{policyId1}'
+            },
+            {
+                'alarmTemplateId': '{alarmTemplateId2}',
+                'checkTemplateId': '{checkTemplateId2}',
+                'groupId': '{groupId}',
+                'links': [
+                    {
+                        'href':
+                        '{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId2}',
+                        'rel': 'self'
+                    }
+                ],
+                'policyId': '{policyId2}'
+            }
+        ]
+        expected = {'policies': policies}
+        self.Policy.get_all_by_group_id.return_value = defer.succeed(policies)
+
+        request = BobbyDummyRequest('/101010/groups/group-def/policies')
+        d = views.get_policies(request, '101010', 'group-def')
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, expected)
+
+    def test_create_policy(self):
+        policy_data = {
+            'alarmTemplateId': 'alarm-template-jkl',
+            'checkTemplateId': 'check-template-ghi',
+            'groupId': 'group-def',
+            'links': [
+                {
+                    'href':
+                    '/101010/groups/group-def/policies/policy-abc',
+                    'rel': 'self'
+                }
+            ],
+            'policyId': 'policy-abc'
+        }
+
+        self.policy.alarm_template_id = policy_data['alarmTemplateId']
+        self.policy.check_template_id = policy_data['checkTemplateId']
+        self.policy.group_id = policy_data['groupId']
+        self.policy.policy_id = policy_data['policyId']
+
+        request = BobbyDummyRequest('/101010/groups/group-def/policies/')
+        request.method = 'POST'
+        request.args['alarmTemplateId'] = [policy_data['alarmTemplateId']]
+        request.args['checkTemplateId'] = [policy_data['checkTemplateId']]
+        request.args['policyId'] = [policy_data['policyId']]
+
+        d = views.create_policy(request, '101010', policy_data['groupId'])
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, policy_data)
+
+    def test_get_policy(self):
+        policy_data = {
+            'alarmTemplateId': 'alarm-template-jkl',
+            'checkTemplateId': 'check-template-ghi',
+            'groupId': 'group-def',
+            'links': [
+                {
+                    'href':
+                    '/101010/groups/group-def/policies/policy-abc',
+                    'rel': 'self'
+                }
+            ],
+            'policyId': 'policy-abc'
+        }
+
+        self.policy.alarm_template_id = policy_data['alarmTemplateId']
+        self.policy.check_template_id = policy_data['checkTemplateId']
+        self.policy.group_id = policy_data['groupId']
+        self.policy.policy_id = policy_data['policyId']
+
+        request = BobbyDummyRequest('/101010/groups/group-def/policies/policy-abc')
+        d = views.get_policy(request, '101010', policy_data['groupId'], policy_data['policyId'])
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, policy_data)
+
+    def test_delete_policy(self):
+        request = BobbyDummyRequest('/101010/groups/uvwxyz/policies/opqrst')
+        d = views.delete_policy(request, '101010', 'uvwxyz', 'opqrst')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 204)
+        self.policy.delete.assert_called_once_with()
