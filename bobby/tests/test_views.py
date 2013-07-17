@@ -131,3 +131,115 @@ class GroupsTest(unittest.TestCase):
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         self.group.delete.assert_called_once_with()
+
+
+class ServersTest(unittest.TestCase):
+    '''Test /{tenantId}/groups/{groupId}/servers'''
+
+    def setUp(self):
+        # Ew. Need to move that client connection out of views soon.
+        client_patcher = mock.patch('bobby.views.client')
+        self.addCleanup(client_patcher.stop)
+        self.client = client_patcher.start()
+
+        Server_patcher = mock.patch(
+            'bobby.views.Server',
+            spec=['get_all_by_group_id', 'get_by_server_id', 'new'])
+        self.addCleanup(Server_patcher.stop)
+        self.Server = Server_patcher.start()
+
+        self.server = mock.create_autospec(models.Server)
+        self.Server.return_value = self.server
+        self.Server.new.return_value = defer.succeed(self.server)
+
+    def test_get_servers(self):
+        servers = [
+            {'entityId': 'entity-abc',
+             'groupId': 'group-def',
+             'links': [
+                 {
+                     'href': '/101010/groups/group-def/servers/server-ghi',
+                     'rel': 'self'
+                 }
+             ],
+             'serverId': 'server-ghi'},
+            {'entityId': 'entity-jkl',
+             'groupId': 'group-def',
+             'links': [
+                 {
+                     'href': '/101010/groups/group-def/servers/server-mno',
+                     'rel': 'self'
+                 }
+             ],
+             'serverId': 'server-mno'},
+        ]
+        expected = {'servers': servers}
+        self.Server.get_all_by_group_id.return_value = defer.succeed(servers)
+        request = BobbyDummyRequest('/101010/groups/group-def/servers')
+        d = views.get_servers(request, '101010', 'group-def')
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, expected)
+
+    def test_create_server(self):
+        server_data = {
+            'entityId': 'entity-xyz',
+            'groupId': 'group-uvw',
+            'links': [
+                {
+                    'href': '/101010/groups/group-uvw/servers/server-rst',
+                    'rel': 'self'
+                }
+            ],
+            'serverId': 'server-rst'
+        }
+
+        self.server.entity_id = server_data['entityId']
+        self.server.group_id = server_data['groupId']
+        self.server.server_id = server_data['serverId']
+
+        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/')
+        request.method = 'POST'
+        request.args['entityId'] = [server_data['entityId']]
+        request.args['serverId'] = [server_data['serverId']]
+
+        d = views.create_server(request, '101010', server_data['groupId'])
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, server_data)
+
+    def test_get_server(self):
+        server_data = {
+            'entityId': 'entity-xyz',
+            'groupId': 'group-uvw',
+            'links': [
+                {
+                    'href': '/101010/groups/group-uvw/servers/server-rst',
+                    'rel': 'self'
+                }
+            ],
+            'serverId': 'server-rst'
+        }
+        self.server.entity_id = server_data['entityId']
+        self.server.group_id = server_data['groupId']
+        self.server.server_id = server_data['serverId']
+        self.Server.get_by_server_id.return_value = defer.succeed(self.server)
+
+        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/server-rst')
+        d = views.get_server(request, '101010', server_data['groupId'], server_data['serverId'])
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, server_data)
+
+    def test_delete_server(self):
+        self.Server.get_by_server_id.return_value = defer.succeed(self.server)
+
+        request = BobbyDummyRequest('/101010/groups/uvwxyz/servers/opqrst')
+        d = views.delete_server(request, '101010', 'uvwxyz', 'opqrst')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 204)
+        self.server.delete.assert_called_once_with()

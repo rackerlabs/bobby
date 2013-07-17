@@ -77,3 +77,87 @@ require the group be empty?).
 DELETE /{tenantId}/groups/{groupId}
 < 204
 < Content-Type: application/json
+
+
+--
+Server Resource
+Servers are monitored in MaaS, and can receive alerts. They belong to scaling
+groups.
+--
+List all the servers for a given group ID.
+GET /{tenantId}/groups/{groupId}/servers
+< 200
+< Content-Type: application/json
+{
+    "servers": [
+        {
+            "entityId": "{entityId1}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId1}",
+                    "rel": "self"
+                }
+            ]
+            "serverId": "{serverId1}"
+        },
+        {
+            "entityId": "{entityId2}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId2}",
+                    "rel": "self"
+                }
+            ]
+            "serverId": "{serverId2}"
+        }
+    ]
+}
+
+
+Create a server group.
+POST /{tenantId}/groups/{groupId}/servers
+> Accept: application/json
+{
+    "entityId": "{entityId}",
+    "serverId": "{serverId}"
+}
+< 201
+< Content-Type: application/json
+{
+    "entityId": "{entityId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId}",
+            "rel": "self"
+        }
+    ],
+    "serverId": "{serverId}"
+}
+
+
+Get a scaling group.
+GET /{tenantId}/groups/{groupId}/servers/{serverId}
+< 200
+< Content-Type: application/json
+{
+    "entityId": "{entityId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId}",
+            "rel": "self"
+        }
+    ],
+    "serverId": "{serverId}"
+}
+
+
+Delete a server group (should this cascade and delete the servers as well, or
+require the group be empty?).
+DELETE /{tenantId}/groups/{groupId}/servers/{serverId}
+< 204
+< Content-Type: application/json
+
+
+

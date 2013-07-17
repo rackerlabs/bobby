@@ -119,6 +119,10 @@ class Server(object):
                                     ConsistencyLevel.ONE)
 
     @classmethod
+    def get_all_by_group_id(Class, client, tenant_id, group_id):
+        raise
+
+    @classmethod
     def new(Class, client, server_id, entity_id, group_id):
         query = 'INSERT INTO server ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
 

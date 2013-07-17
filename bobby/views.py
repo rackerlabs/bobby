@@ -4,7 +4,7 @@ from klein import Klein
 from silverberg.client import CQLClient
 from twisted.internet import endpoints, reactor
 
-from bobby.models import Group
+from bobby.models import Group, Server
 
 app = Klein()
 client = CQLClient(
@@ -75,6 +75,78 @@ def delete_group(request, tenant_id, group_id):
     def delete_group(group):
         return group.delete()
     d.addCallback(delete_group)
+
+    def finish(_):
+        request.setResponseCode(204)
+        request.finish()
+    return d.addCallback(finish)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['GET'])
+def get_servers(request, tenant_id, group_id):
+    d = Server.get_all_by_group_id(client, tenant_id, group_id)
+
+    def serialize(servers):
+        result = {'servers': servers}
+        request.write(json.dumps(result))
+        request.finish()
+    return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['PUT'])
+def create_server(request, tenant_id, group_id):
+    server_id = request.args.get('serverId')[0]
+    entity_id = request.args.get('entityId')[0]
+
+    d = Server.new(client, server_id, entity_id, group_id)
+
+    def serialize(server):
+        # XXX: the actual way to do this is using a json encoder. Not now.
+        json_object = {
+            'entityId': server.entity_id,
+            'groupId': server.group_id,
+            'links': [
+                {
+                    'href': '{0}{1}'.format(request.postpath, server.server_id),
+                    'rel': 'self'
+                }
+            ],
+            'serverId': server.server_id
+        }
+
+        request.write(json.dumps(json_object))
+        request.finish()
+    return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['GET'])
+def get_server(request, tenant_id, group_id, server_id):
+    d = Server.get_by_server_id(client, tenant_id, group_id, server_id)
+
+    def serialize(server):
+        json_object = {
+            'entityId': server.entity_id,
+            'groupId': server.group_id,
+            'links': [
+                {
+                    'href': '{0}'.format(request.postpath),
+                    'rel': 'self'
+                }
+            ],
+            'serverId': server.server_id
+        }
+        request.write(json.dumps(json_object))
+        request.finish()
+    return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['DELETE'])
+def delete_server(request, tenant_id, group_id, server_id):
+    d = Server.get_by_server_id(client, tenant_id, group_id, server_id)
+
+    def delete_server(server):
+        return server.delete()
+    d.addCallback(delete_server)
 
     def finish(_):
         request.setResponseCode(204)
