@@ -72,6 +72,13 @@ GET /{tenantId}/groups/{groupId}:
 }
 
 
+Delete a server group (should this cascade and delete the servers as well, or
+require the group be empty?).
+DELETE /{tenantId}/groups/{groupId}
+< 204
+< Content-Type: application/json
+
+
 
 
 

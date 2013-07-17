@@ -69,6 +69,20 @@ def get_group(request, tenant_id, group_id):
     return d.addCallback(serialize_group)
 
 
+@app.route('/<string:tenant_id>/groups/{group_id}', methods=['DELETE'])
+def delete_group(request, tenant_id, group_id):
+    d = Group.get_by_group_id()
+
+    def delete_group(group):
+        return group.delete()
+    d.addCallback(delete_group)
+
+    def finish(_):
+        request.setResponseCode(204)
+        request.finish()
+    return d.addCallback(finish)
+
+
 # Below this line are old and busted
 
 

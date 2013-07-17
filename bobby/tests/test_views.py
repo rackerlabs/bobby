@@ -122,6 +122,16 @@ class GroupsTest(unittest.TestCase):
         result = json.loads(request.written[0])
         self.assertEqual(result, group_data)
 
+    def test_delete_group(self):
+        self.Group.get_by_group_id.return_value = defer.succeed(self.group)
+
+        request = BobbyDummyRequest('/101010/groups/uvwxyz')
+        d = views.delete_group(request, '101010', 'uvwxyz')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 204)
+        self.group.delete.assert_called_once_with()
+
 
 class GroupsTestOld(unittest.TestCase):
     '''Test /groups.'''
