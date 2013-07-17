@@ -44,6 +44,14 @@ class Group(object):
                                     ConsistencyLevel.ONE)
 
     @classmethod
+    def get_by_group_id(Class, client, tenant_id, group_id):
+        query = 'SELECT * FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;'
+        return client.execute(query,
+                              {'groupId': group_id,
+                               'tenantId': tenant_id},
+                              ConsistencyLevel.ONE)
+
+    @classmethod
     def new(Class, client, group_id, tenant_id, notification=None, notification_plan=None):
         to_set = [
             ('groupId', group_id),

@@ -45,6 +45,19 @@ class GroupTestCase(DBTestCase):
             self.assertTrue(isinstance(result, models.Group))
         return d.addCallback(_assert)
 
+    def test_get_by_group_id(self):
+        def execute(*args, **kwargs):
+            return defer.succeed(None)
+        self.client.execute.side_effect = execute
+
+        d = models.Group.get_by_group_id(self.client, 'group-x', 'tenant-y')
+
+        self.successResultOf(d)
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;',
+            {'groupId': 'tenant-y', 'tenantId': 'group-x'},
+            1)
+
     def test_delete(self):
         def execute(*args, **kwargs):
             return defer.succeed(None)
