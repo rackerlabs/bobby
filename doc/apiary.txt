@@ -56,6 +56,21 @@ POST /{tenantId}/groups
 }
 
 
+Get a scaling group.
+GET /{tenantId}/groups/{groupId}:
+< 200
+< Content-Type: application/json
+{
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
+            "rel": "self"
+        }
+    ]
+    "webhook": "http://example.com/{groupId}/webhook"
+}
+
 
 
 

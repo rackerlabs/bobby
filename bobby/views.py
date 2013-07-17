@@ -49,6 +49,26 @@ def create_group(request, tenant_id):
     return d.addCallback(_serialize_object)
 
 
+@app.route('/<string:tenant_id>/groups/{group_id}', methods=['GET'])
+def get_group(request, tenant_id, group_id):
+    d = Group.get_by_group_id(tenant_id, group_id)
+
+    def serialize_group(group):
+        json_object = {
+            'groupId': group.group_id,
+            'links': [
+                {
+                    'href': '{0}'.format(request.postpath),
+                    'rel': 'self'
+                }
+            ],
+            'webhook': group.webhook
+        }
+        request.write(json.dumps(json_object))
+        request.finish()
+    return d.addCallback(serialize_group)
+
+
 # Below this line are old and busted
 
 

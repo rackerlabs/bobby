@@ -35,7 +35,7 @@ class GroupsTest(unittest.TestCase):
 
         Group_patcher = mock.patch(
             'bobby.views.Group',
-            spec=['get_by_tenant_id', 'new'])
+            spec=['get_by_group_id', 'get_by_tenant_id', 'new'])
         self.addCleanup(Group_patcher.stop)
         self.Group = Group_patcher.start()
 
@@ -93,6 +93,30 @@ class GroupsTest(unittest.TestCase):
         request.args['webhook'] = [group_data['webhook']]
 
         d = views.create_group(request, 010101)
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, group_data)
+
+    def test_get_group(self):
+        group_data = {
+            'groupId': 'uvwxyz',
+            'links': [
+                {
+                    'href': '/101010/groups/uvwxyz',
+                    'rel': 'self'
+                }
+            ],
+            'webhook': 'http://example.com/an_webhook'
+        }
+        group = mock.create_autospec(models.Group)
+        group.group_id = group_data['groupId']
+        group.webhook = group_data['webhook']
+        self.Group.get_by_group_id.return_value = defer.succeed(group)
+
+        request = BobbyDummyRequest('/101010/groups/uvwxyz')
+
+        d = views.get_group(request, '101010', 'uvwxyz')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
