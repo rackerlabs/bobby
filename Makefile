@@ -1,7 +1,10 @@
+CODEDIR=bobby
 CASSANDRA_HOST ?= localhost
 CASSANDRA_PORT ?= 9160
 CONTROL_KEYSPACE ?= BOBBY
 SCRIPTSDIR=scripts
+PYTHONLINT=${SCRIPTSDIR}/python-lint.py
+PYDIRS=${CODEDIR} ${SCRIPTSDIR}
 
 run:
 	twistd -n -y app.tac
@@ -26,3 +29,16 @@ teardown-dev-schema:
 clear-dev-schema: FORCE teardown-dev-schema load-dev-schema
 
 FORCE:
+
+lint:
+	${PYTHONLINT} ${PYDIRS}
+
+clean: 
+	find . -name '*.pyc' -delete
+	find . -name '.coverage' -delete
+	find . -name '_trial_coverage' -print0 | xargs rm -rf
+	find . -name '_trial_temp' -print0 | xargs rm -rf
+	rm -rf dist build *.egg-info
+	rm -rf schema/setup-*.cql
+	rm -rf schema/migrations-*.cql
+	rm -rf schema/teardown-*.cql
