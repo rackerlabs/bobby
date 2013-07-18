@@ -19,12 +19,19 @@ class GroupTestCase(DBTestCase):
     def test_new(self):
         self.client.execute.return_value = defer.succeed(None)
 
-        d = models.Group.new(self.client, 'group-b', 'tenant-a')
+        d = models.Group.new(self.client, 'group-b', 'tenant-a',
+                             'notification-c', 'notification_plan-d')
 
         def _assert(result):
             self.client.execute.assert_called_once_with(
-                'INSERT INTO groups ("groupId", "tenantId") VALUES (:groupId, :tenantId);',
-                {'groupId': 'group-b', 'tenantId': 'tenant-a'},
+                ' '.join([
+                    'INSERT INTO groups ("groupId", "tenantId", "notification", "notificationPlan")',
+                    'VALUES (:groupId, :tenantId, :notification, :notificationPlan);']),
+
+                {'notificationPlan': 'notification_plan-d',
+                 'notification': 'notification-c',
+                 'groupId': 'group-b',
+                 'tenantId': 'tenant-a'},
                 1)
             self.assertTrue(isinstance(result, models.Group))
         return d.addCallback(_assert)
@@ -41,15 +48,19 @@ class GroupTestCase(DBTestCase):
 
     def test_get_by_group_id(self):
         def execute(*args, **kwargs):
-            return defer.succeed(None)
+            result = [{'groupId': 'group-y',
+                       'tenantId': 'tenant-x',
+                       'notificationPlan': 'notificationPlan-w',
+                       'notification': 'notification-z'}]
+            return defer.succeed(result)
         self.client.execute.side_effect = execute
 
-        d = models.Group.get_by_group_id(self.client, 'group-x', 'tenant-y')
+        d = models.Group.get_by_group_id(self.client, 'tenant-x', 'group-y')
 
         self.successResultOf(d)
         self.client.execute.assert_called_once_with(
             'SELECT * FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;',
-            {'groupId': 'tenant-y', 'tenantId': 'group-x'},
+            {'groupId': 'group-y', 'tenantId': 'tenant-x'},
             1)
 
     def test_delete(self):
@@ -57,7 +68,8 @@ class GroupTestCase(DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        group = models.Group(self.client, 'group-x', 'tenant-y')
+        group = models.Group(self.client, 'group-x', 'tenant-y',
+                             'notification-z', 'notification_plan-w')
         d = group.delete()
 
         def _assert(_):
@@ -68,59 +80,9 @@ class GroupTestCase(DBTestCase):
         d.addCallback(_assert)
         return d
 
-    def test_view_notification(self):
-        self.client.execute.return_value = defer.succeed('notification-abcdef')
-
-        group = models.Group(self.client, 'group-x', 'tenant-y')
-        d = group.view_notification()
-
-        def _assert(result):
-            self.client.execute.assert_called_once_with(
-                'SELECT notification FROM groups WHERE "groupId"=:groupId AND"tenantId"=:tenantId',
-                {'groupId': 'group-x', 'tenantId': 'tenant-y'},
-                1)
-            self.assertEqual(result, 'notification-abcdef')
-        d.addCallback(_assert)
-        return d
-
-    def test_view_notification_plan(self):
-        self.client.execute.return_value = defer.succeed('plan-fedcba')
-
-        group = models.Group(self.client, 'group-x', 'tenant-y')
-        d = group.view_notification_plan()
-
-        def _assert(result):
-            self.client.execute.assert_called_once_with(
-                'SELECT notificationPlan FROM groups WHERE "groupId"=:groupId AND"tenantId"=:tenantId',
-                {'groupId': 'group-x', 'tenantId': 'tenant-y'},
-                1)
-            self.assertEqual(result, 'plan-fedcba')
-        d.addCallback(_assert)
-        return d
-
 
 class ServerTestCase(DBTestCase):
     '''Tests for bobby.models.Server.'''
-
-    def test_all(self):
-        '''Server.all returns all the groups.'''
-        def execute(*args, **kwargs):
-            expected = [
-                {'serverId': '2', 'groupId': 'y', 'state': 'OK'},
-                {'serverId': '1', 'groupId': 'x', 'state': 'OK'}]
-            return defer.succeed(expected)
-        self.client.execute.side_effect = execute
-
-        d = models.Server.all(self.client)
-
-        def _assert(result):
-            self.assertEqual(len(result), 2)
-            group = result[0]
-            self.assertEqual(group['serverId'], u'2')
-            self.assertEqual(group['groupId'], u'y')
-            self.assertEqual(group['state'], u'OK')
-        d.addCallback(_assert)
-        return d
 
     def test_new(self):
         self.client.execute.return_value = defer.succeed(None)

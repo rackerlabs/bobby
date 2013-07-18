@@ -18,8 +18,10 @@ GET /{tenantId}/groups
                     "href": "{url_root}/v1.0/{tenantId}/groups/{groupId1}",
                     "rel": "self"
                 }
-            ]
-            "webhook": "http://example.com/webhook1"
+            ],
+            "notification": "{notification1}",
+            "notificationPlan": "{notificationPlan1}",
+            "tenantId": "{tenantId}"
         },
         {
             "groupId": "{groupId2}",
@@ -28,8 +30,10 @@ GET /{tenantId}/groups
                     "href": "{url_root}/v1.0/{tenantId}/groups/{groupId2}",
                     "rel": "self"
                 }
-            ]
-            "webhook": "http://example.com/webhook2"
+            ],
+            "notification": "{notification2}",
+            "notificationPlan": "{notificationPlan2}",
+            "tenantId": "{tenantId}"
         }
     ]
 }
@@ -40,7 +44,8 @@ POST /{tenantId}/groups
 > Accept: application/json
 {
     "groupId": "{groupId1}",
-    "webhook": "http://example.com/{groupId1}/webhook"
+    "notification": "{notification}",
+    "notificationPlan": "{notificationPlan}"
 }
 < 201
 < Content-Type: application/json
@@ -51,8 +56,10 @@ POST /{tenantId}/groups
             "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
             "rel": "self"
         }
-    ]
-    "webhook": "http://example.com/{groupId}/webhook"
+    ],
+    "notification": "{notification2}",
+    "notificationPlan": "{notificationPlan2}",
+    "tenantId": "{tenantId}"
 }
 
 
@@ -67,8 +74,10 @@ GET /{tenantId}/groups/{groupId}:
             "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
             "rel": "self"
         }
-    ]
-    "webhook": "http://example.com/{groupId}/webhook"
+    ],
+    "notification": "{notification2}",
+    "notificationPlan": "{notificationPlan2}",
+    "tenantId": "{tenantId}"
 }
 
 

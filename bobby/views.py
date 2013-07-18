@@ -25,52 +25,55 @@ def get_groups(request, tenant_id):
     return d.addCallback(_return_result)
 
 
-@app.route('/<string:tenant_id>/groups', methods=['PUT'])
+@app.route('/<string:tenant_id>/groups', methods=['POST'])
 def create_group(request, tenant_id):
     group_id = request.args.get('groupId')[0]
-    group_webhook = request.args.get('webhook')[0]
+    notification = request.args.get('notification')[0]
+    notification_plan = request.args.get('notificationPlan')[0]
 
-    d = Group.new(group_id, group_webhook)
+    d = Group.new(client, group_id, tenant_id, notification, notification_plan)
 
     def _serialize_object(group):
         # XXX: the actual way to do this is using a json encoder. Not now.
         json_object = {
             'groupId': group.group_id,
-            'links': {
+            'links': [{
                 'href': '{0}{1}'.format(request.postpath, group.group_id),
                 'rel': 'self'
-            },
-            'webhook': group.webhook
+            }],
+            'notification': group.notification,
+            'notificationPlan': group.notification_plan,
+            'tenantId': group.tenant_id
         }
-
+        request.setResponseCode(201)
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(_serialize_object)
 
 
-@app.route('/<string:tenant_id>/groups/{group_id}', methods=['GET'])
+@app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['GET'])
 def get_group(request, tenant_id, group_id):
-    d = Group.get_by_group_id(tenant_id, group_id)
+    d = Group.get_by_group_id(client, tenant_id, group_id)
 
     def serialize_group(group):
         json_object = {
             'groupId': group.group_id,
-            'links': [
-                {
-                    'href': '{0}'.format(request.postpath),
-                    'rel': 'self'
-                }
-            ],
-            'webhook': group.webhook
+            'links': [{
+                'href': '{0}'.format(request.postpath),
+                'rel': 'self'
+            }],
+            'notification': group.notification,
+            'notificationPlan': group.notification_plan,
+            'tenantId': group.tenant_id
         }
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(serialize_group)
 
 
-@app.route('/<string:tenant_id>/groups/{group_id}', methods=['DELETE'])
+@app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['DELETE'])
 def delete_group(request, tenant_id, group_id):
-    d = Group.get_by_group_id()
+    d = Group.get_by_group_id(client, tenant_id, group_id)
 
     def delete_group(group):
         return group.delete()

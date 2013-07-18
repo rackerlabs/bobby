@@ -51,8 +51,11 @@ class GroupsTest(unittest.TestCase):
                      'rel': 'self'
                  }
              ],
-             'webhook': 'http://example.com/an_webhook1'
+             'notification': 'notification-ghi',
+             'notificationPlan': 'notificationPlan-jkl',
+             'tenantId': '101010'
              },
+
             {'groupId': 'fedcba',
              'links': [
                  {
@@ -60,7 +63,9 @@ class GroupsTest(unittest.TestCase):
                      'rel': 'self'
                  }
              ],
-             'webhook': 'http://example.com/an_webhook2'
+             'notification': 'notification-igh',
+             'notificationPlan': 'notificationPlan-lkj',
+             'tenantId': '101010'
              }
         ]
         expected = {'groups': groups}
@@ -75,22 +80,27 @@ class GroupsTest(unittest.TestCase):
     def test_create_group(self):
         group_data = {
             'groupId': 'uvwxyz',
-            'links': {
+            'links': [{
                 'href': '/101010/groups/uvwxyz',
                 'rel': 'self'
-            },
-            'webhook': 'http://example.com/an_webhook'
+            }],
+            'notification': 'notification-abc',
+            'notificationPlan': 'notification-def',
+            'tenantId': 'tenant-ghi'
         }
 
         group = mock.create_autospec(models.Group)
         group.group_id = group_data['groupId']
-        group.webhook = group_data['webhook']
+        group.notification = group_data['notification']
+        group.notification_plan = group_data['notificationPlan']
+        group.tenant_id = group_data['tenantId']
         self.Group.new.return_value = defer.succeed(group)
 
         request = BobbyDummyRequest('/101010/groups/')
         request.method = 'POST'
         request.args['groupId'] = [group_data['groupId']]
-        request.args['webhook'] = [group_data['webhook']]
+        request.args['notification'] = [group_data['notification']]
+        request.args['notificationPlan'] = [group_data['notificationPlan']]
 
         d = views.create_group(request, 010101)
 
@@ -101,17 +111,20 @@ class GroupsTest(unittest.TestCase):
     def test_get_group(self):
         group_data = {
             'groupId': 'uvwxyz',
-            'links': [
-                {
-                    'href': '/101010/groups/uvwxyz',
-                    'rel': 'self'
-                }
-            ],
-            'webhook': 'http://example.com/an_webhook'
+            'links': [{
+                'href': '/101010/groups/uvwxyz',
+                'rel': 'self'
+            }],
+            'notification': 'notification-abc',
+            'notificationPlan': 'notification-def',
+            'tenantId': 'tenant-ghi'
         }
+
         group = mock.create_autospec(models.Group)
         group.group_id = group_data['groupId']
-        group.webhook = group_data['webhook']
+        group.notification = group_data['notification']
+        group.notification_plan = group_data['notificationPlan']
+        group.tenant_id = group_data['tenantId']
         self.Group.get_by_group_id.return_value = defer.succeed(group)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz')

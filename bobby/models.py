@@ -16,25 +16,13 @@ class Group(object):
     :type tenant_id: ``str``
     """
 
-    def __init__(self, client, group_id=None, tenant_id=None):
+    def __init__(self, client, group_id, tenant_id, notification, notification_plan):
         self._client = client
 
         self.group_id = group_id
         self.tenant_id = tenant_id
-
-    def view_notification(self):
-        query = 'SELECT notification FROM groups WHERE "groupId"=:groupId AND"tenantId"=:tenantId'
-        return self._client.execute(query,
-                                    {'groupId': self.group_id,
-                                     'tenantId': self.tenant_id},
-                                    ConsistencyLevel.ONE)
-
-    def view_notification_plan(self):
-        query = 'SELECT notificationPlan FROM groups WHERE "groupId"=:groupId AND"tenantId"=:tenantId'
-        return self._client.execute(query,
-                                    {'groupId': self.group_id,
-                                     'tenantId': self.tenant_id},
-                                    ConsistencyLevel.ONE)
+        self.notification = notification
+        self.notification_plan = notification_plan
 
     def delete(self):
         query = 'DELETE FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;'
@@ -51,34 +39,35 @@ class Group(object):
     @classmethod
     def get_by_group_id(Class, client, tenant_id, group_id):
         query = 'SELECT * FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;'
-        return client.execute(query,
-                              {'groupId': group_id,
-                               'tenantId': tenant_id},
-                              ConsistencyLevel.ONE)
+        d = client.execute(query,
+                           {'groupId': group_id,
+                            'tenantId': tenant_id},
+                           ConsistencyLevel.ONE)
+
+        def create_object(results):
+            group = results[0]
+            return defer.succeed(Class(
+                client, group['groupId'], group['tenantId'],
+                group['notification'], group['notificationPlan']))
+        return d.addCallback(create_object)
 
     @classmethod
-    def new(Class, client, group_id, tenant_id, notification=None, notification_plan=None):
-        to_set = [
-            ('groupId', group_id),
-            ('tenantId', tenant_id)]
-        if notification:
-            to_set.append(('notification', notification))
-        if notification_plan:
-            to_set.append(('notification_plan', notification_plan))
-        fields = ['"{0}"'.format(field) for field, val in to_set]
-        values = [':{0}'.format(field) for field, val in to_set]
+    def new(Class, client, group_id, tenant_id, notification, notification_plan):
+        query = ' '.join([
+                'INSERT INTO groups',
+                '("groupId", "tenantId", "notification", "notificationPlan")',
+                'VALUES (:groupId, :tenantId, :notification, :notificationPlan);'])
 
-        query = 'INSERT INTO groups ({0}) VALUES ({1});'.format(
-            ", ".join(fields), ", ".join(values))
-
-        data = {}
-        for key, val in to_set:
-            data[key] = val
+        data = {'groupId': group_id,
+                'tenantId': tenant_id,
+                'notification': notification,
+                'notificationPlan': notification_plan}
 
         d = client.execute(query, data, ConsistencyLevel.ONE)
 
         def create_instance(result):
-            return defer.succeed(Class(client, group_id, tenant_id))
+            return defer.succeed(Class(
+                client, group_id, tenant_id, notification, notification_plan))
         return d.addCallback(create_instance)
 
 
@@ -135,11 +124,6 @@ class Server(object):
         def create_server(result):
             return defer.succeed(Class(client, server_id, entity_id, group_id))
         return d.addCallback(create_server)
-
-    @staticmethod
-    def all(client):
-        query = 'SELECT * FROM SERVERS;'
-        return client.execute(query, {}, ConsistencyLevel.ONE)
 
 
 class Policy(object):
