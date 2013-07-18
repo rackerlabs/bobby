@@ -159,7 +159,7 @@ def delete_server(request, tenant_id, group_id, server_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])
 def get_policies(request, tenant_id, group_id):
-    d = Policy.get_all_by_group_id(client, tenant_id, group_id)
+    d = Policy.get_all_by_group_id(client, group_id)
 
     def serialize(policies):
         result = {'policies': policies}
@@ -168,7 +168,7 @@ def get_policies(request, tenant_id, group_id):
     return d.addCallback(serialize)
 
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['PUT'])
+@app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['POST'])
 def create_policy(request, tenant_id, group_id):
     alarm_template_id = request.args.get('alarmTemplateId')[0]
     check_template_id = request.args.get('checkTemplateId')[0]
@@ -190,7 +190,7 @@ def create_policy(request, tenant_id, group_id):
             ],
             'policyId': policy.policy_id
         }
-
+        request.setResponseCode(201)
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(serialize)
@@ -198,7 +198,7 @@ def create_policy(request, tenant_id, group_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['GET'])
 def get_policy(request, tenant_id, group_id, policy_id):
-    d = Policy.get_by_policy_id(client, tenant_id, group_id, policy_id)
+    d = Policy.get_by_policy_id(client, policy_id)
 
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -222,7 +222,7 @@ def get_policy(request, tenant_id, group_id, policy_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['DELETE'])
 def delete_policy(request, tenant_id, group_id, policy_id):
-    d = Policy.get_by_policy_id(client, tenant_id, group_id, policy_id)
+    d = Policy.get_by_policy_id(client, policy_id)
 
     def delete(policy):
         return policy.delete()

@@ -139,7 +139,7 @@ class PolicyTestCase(DBTestCase):
 
         def _assert(result):
             query = ' '.join((
-                'INSERT INTO policy ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
+                'INSERT INTO policies ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
                 'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);',
             ))
 
@@ -161,7 +161,7 @@ class PolicyTestCase(DBTestCase):
 
         def _assert(_):
             self.client.execute.assert_called_once_with(
-                'DELETE FROM policy WHERE "policyId"=:policyId AND "groupId"=:groupId;',
+                'DELETE FROM policies WHERE "policyId"=:policyId AND "groupId"=:groupId;',
                 {'policyId': 'policy-z', 'groupId': 'group-y'},
                 1)
         d.addCallback(_assert)

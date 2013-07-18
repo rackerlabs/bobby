@@ -168,9 +168,29 @@ class Policy(object):
         self.check_template_id = check_template_id
 
     @classmethod
+    def get_by_policy_id(Class, client, policy_id):
+        query = 'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;'
+
+        d = client.execute(query, {'policyId': policy_id},
+                           ConsistencyLevel.ONE)
+
+        def create_object(results):
+            data = results[0]
+            policy = Class(client, data['policyId'], data['groupId'],
+                           data['alarmTemplateId'], data['checkTemplateId'])
+            return defer.succeed(policy)
+        return d.addCallback(create_object)
+
+    @classmethod
+    def get_all_by_group_id(Class, client, group_id):
+        query = 'SELECT * FROM policies WHERE "groupId"=:groupId;'
+        return client.execute(query, {'groupId': group_id},
+                              ConsistencyLevel.ONE)
+
+    @classmethod
     def new(Class, client, policy_id, group_id, alarm_template_id, check_template_id):
         query = " ".join((
-            'INSERT INTO policy ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
+            'INSERT INTO policies ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
             'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);'
         ))
 
@@ -187,7 +207,7 @@ class Policy(object):
         return d.addCallback(create_policy_object)
 
     def delete(self):
-        query = 'DELETE FROM policy WHERE "policyId"=:policyId AND "groupId"=:groupId;'
+        query = 'DELETE FROM policies WHERE "policyId"=:policyId AND "groupId"=:groupId;'
 
         return self._client.execute(query,
                                     {'policyId': self.policy_id,
