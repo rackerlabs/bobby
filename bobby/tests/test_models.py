@@ -91,7 +91,7 @@ class ServerTestCase(DBTestCase):
 
         def _assert(result):
             self.client.execute.assert_called_once_with(
-                'INSERT INTO server ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);',
+                'INSERT INTO servers ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);',
                 {'serverId': 'server-a', 'entityId': 'entity-b', 'groupId': 'group-c'},
                 1)
             self.assertTrue(isinstance(result, models.Server))

@@ -23,6 +23,8 @@ class BobbyDummyRequest(DummyRequest):
         super(BobbyDummyRequest, self).__init__(postpath, session)
         self.content = BobbyDummyContent(content)
 
+        self.uri = postpath
+
 
 class GroupsTest(unittest.TestCase):
     '''Test /{tenantId}/groups'''

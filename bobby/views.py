@@ -96,7 +96,7 @@ def get_servers(request, tenant_id, group_id):
     return d.addCallback(serialize)
 
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['PUT'])
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['POST'])
 def create_server(request, tenant_id, group_id):
     server_id = request.args.get('serverId')[0]
     entity_id = request.args.get('entityId')[0]
@@ -110,13 +110,13 @@ def create_server(request, tenant_id, group_id):
             'groupId': server.group_id,
             'links': [
                 {
-                    'href': '{0}{1}'.format(request.postpath, server.server_id),
+                    'href': '{0}{1}'.format(request.uri, server.server_id),
                     'rel': 'self'
                 }
             ],
             'serverId': server.server_id
         }
-
+        request.setResponseCode(201)
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(serialize)
@@ -124,7 +124,7 @@ def create_server(request, tenant_id, group_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['GET'])
 def get_server(request, tenant_id, group_id, server_id):
-    d = Server.get_by_server_id(client, tenant_id, group_id, server_id)
+    d = Server.get_by_server_id(client, server_id)
 
     def serialize(server):
         json_object = {
@@ -145,7 +145,7 @@ def get_server(request, tenant_id, group_id, server_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['DELETE'])
 def delete_server(request, tenant_id, group_id, server_id):
-    d = Server.get_by_server_id(client, tenant_id, group_id, server_id)
+    d = Server.get_by_server_id(client, server_id)
 
     def delete_server(server):
         return server.delete()

@@ -109,11 +109,28 @@ class Server(object):
 
     @classmethod
     def get_all_by_group_id(Class, client, tenant_id, group_id):
-        raise
+        query = 'SELECT * FROM servers WHERE "groupId"=:groupId ALLOW FILTERING;'
+
+        return client.execute(query,
+                              {'groupId': group_id},
+                              ConsistencyLevel.ONE)
+
+    @classmethod
+    def get_by_server_id(Class, client, server_id):
+        query = 'SELECT * FROM servers WHERE "serverId"=:serverId;'
+
+        d = client.execute(query, {'serverId': server_id},
+                           ConsistencyLevel.ONE)
+
+        def create_object(results):
+            server = results[0]
+            return defer.succeed(
+                Class(client, server['serverId'], server['entityId'], server['groupId']))
+        return d.addCallback(create_object)
 
     @classmethod
     def new(Class, client, server_id, entity_id, group_id):
-        query = 'INSERT INTO server ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
+        query = 'INSERT INTO servers ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
 
         d = client.execute(query,
                            {'serverId': server_id,
