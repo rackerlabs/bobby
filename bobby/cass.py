@@ -1,12 +1,12 @@
-'''
+"""
 Functions for getting data out of Cassandra.
-'''
+"""
 from silverberg.client import ConsistencyLevel
 from twisted.internet import defer
 
 
 class ExcessiveResultsError(Exception):
-    '''Exception raised when too many results are found.'''
+    """Exception raised when too many results are found."""
     def __init__(self, type_string, type_id):
         super(ExcessiveResultsError, self).__init__(
             'Too many results found for type "{0}" and id "{1}"'.format(
@@ -14,20 +14,20 @@ class ExcessiveResultsError(Exception):
 
 
 class ResultNotFoundError(Exception):
-    '''Exception raised when a group is not found when querying Cassandra.'''
+    """Exception raised when a group is not found when querying Cassandra."""
     def __init__(self, type_string, type_id):
         super(ResultNotFoundError, self).__init__(
             'Result of type "{0}" and id "{1}" not found.'.format(type_string, type_id))
 
 
 def get_groups_by_tenant_id(tenant_id):
-    '''Get all groups owned by a provided tenant.'''
+    """Get all groups owned by a provided tenant."""
     query = 'SELECT * FROM groups WHERE "tenantId"=:tenantId ALLOW FILTERING;'
     return _client.execute(query, {'tenantId': tenant_id}, ConsistencyLevel.ONE)
 
 
 def get_group_by_id(group_id):
-    '''Get a group by its id.'''
+    """Get a group by its id."""
     query = 'SELECT * FROM groups WHERE "groupId"=:groupId;'
     d = _client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
 
@@ -41,7 +41,7 @@ def get_group_by_id(group_id):
 
 
 def create_group(group_id, tenant_id, notification, notification_plan):
-    '''Create a new group and return that new group.'''
+    """Create a new group and return that new group."""
 
     query = ' '.join([
             'INSERT INTO groups',
@@ -61,7 +61,7 @@ def create_group(group_id, tenant_id, notification, notification_plan):
 
 
 def delete_group(group_id):
-    '''Delete a group.'''
+    """Delete a group."""
     query = 'DELETE FROM groups WHERE "groupId"=:groupId;'
     return _client.execute(query,
                            {'groupId': group_id},
@@ -69,14 +69,14 @@ def delete_group(group_id):
 
 
 def get_servers_by_group_id(group_id):
-    '''Get all servers with a specified groupId.'''
+    """Get all servers with a specified groupId."""
     query = 'SELECT * FROM servers WHERE "groupId"=:groupId ALLOW FILTERING;'
 
     return _client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
 
 
 def get_server_by_server_id(server_id):
-    '''Get a server by its serverId.'''
+    """Get a server by its serverId."""
 
     query = 'SELECT * FROM servers WHERE "serverId"=:serverId;'
 
@@ -93,7 +93,10 @@ def get_server_by_server_id(server_id):
 
 
 def create_server(server_id, entity_id, group_id, server_policies):
-    query = 'INSERT INTO servers ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
+    """Create and return a new server dict."""
+    query = ' '.join([
+        'INSERT INTO servers ("serverId", "entityId", "groupId")',
+        'VALUES (:serverId, :entityId, :groupId);'])
 
     d = _client.execute(query,
                         {'serverId': server_id, 'entityId': entity_id, 'groupId': group_id},
@@ -122,6 +125,7 @@ def create_server(server_id, entity_id, group_id, server_policies):
 
 
 def delete_server(server_id):
+    """Delete a server and cascade to deleting related serverpolicies."""
     # TODO: also delete the entity is MaaS
     query = 'DELETE FROM servers WHERE "serverId"=:serverId;'
     d = _client.execute(query,
@@ -135,7 +139,7 @@ def delete_server(server_id):
 
 
 def get_serverpolicies_for_server(server_id):
-    '''Get all server policies for a provided server_id.'''
+    """Get all server policies for a provided server_id."""
     query = 'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;'
     return _client.execute(query,
                            {'serverId': server_id},
@@ -143,14 +147,14 @@ def get_serverpolicies_for_server(server_id):
 
 
 def get_policies_by_group_id(group_id):
-    '''Get all policies owned by a provided groupId.'''
+    """Get all policies owned by a provided groupId."""
     query = 'SELECT * FROM policies WHERE "groupId"=:groupId;'
     return _client.execute(query, {'groupId': group_id},
                            ConsistencyLevel.ONE)
 
 
 def get_policy_by_policy_id(policy_id):
-    '''Get a single policy by its policyId.'''
+    """Get a single policy by its policyId."""
     query = 'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;'
 
     d = _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
@@ -165,7 +169,7 @@ def get_policy_by_policy_id(policy_id):
 
 
 def create_policy(policy_id, group_id, alarm_template_id, check_template_id):
-    '''Create and return a policy.'''
+    """Create and return a policy."""
     query = ' '.join((
         'INSERT INTO policies ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
         'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);'
@@ -184,7 +188,7 @@ def create_policy(policy_id, group_id, alarm_template_id, check_template_id):
 
 
 def delete_policy(policy_id):
-    '''Delete a policy and associated serverpolicies.'''
+    """Delete a policy and associated serverpolicies."""
     query = 'DELETE FROM policies WHERE "policyId"=:policyId;'
 
     d = _client.execute(query,
@@ -201,5 +205,6 @@ _client = None
 
 
 def set_client(client):
+    """Set the CQLClient connection to use."""
     global _client
     _client = client

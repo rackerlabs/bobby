@@ -1,6 +1,6 @@
-'''
+"""
 Tests for bobby.cass
-'''
+"""
 from bobby import cass
 
 import mock
@@ -10,17 +10,19 @@ from twisted.trial import unittest
 
 
 class _DBTestCase(unittest.TestCase):
+    """Abstract DB test case."""
 
     def setUp(self):
+        """Patch CQLClient."""
         self.client = mock.create_autospec(CQLClient)
         cass.set_client(self.client)
 
 
 class TestGetGroupsByTenantId(_DBTestCase):
-    '''Test bobby.cass.get_groups_by_tenant_id.'''
+    """Test bobby.cass.get_groups_by_tenant_id."""
 
     def test_get_grous_by_tenant_id(self):
-        '''Return all the groups by a given tenant id.'''
+        """Return all the groups by a given tenant id."""
         expected = []
         self.client.execute.return_value = defer.succeed(expected)
 
@@ -35,10 +37,10 @@ class TestGetGroupsByTenantId(_DBTestCase):
 
 
 class TestGetGroupById(_DBTestCase):
-    '''Test bobby.cass.get_group_by_id.'''
+    """Test bobby.cass.get_group_by_id."""
 
     def test_get_group_by_id(self):
-        '''Returns a single dict, rather than a single item list.'''
+        """Returns a single dict, rather than a single item list."""
         expected = {'groupId': 'group-abc',
                     'tenantId': '101010',
                     'notification': 'notification-ghi',
@@ -55,7 +57,7 @@ class TestGetGroupById(_DBTestCase):
             1)
 
     def test_get_group_by_id_no_such_id(self):
-        '''Raises an error if no group is found.'''
+        """Raises an error if no group is found."""
         self.client.execute.return_value = defer.succeed([])
 
         d = cass.get_group_by_id('group-abc')
@@ -64,7 +66,7 @@ class TestGetGroupById(_DBTestCase):
         self.assertTrue(result.check(cass.ResultNotFoundError))
 
     def test_get_group_by_id_integrity_problems(self):
-        '''Raises an error if more than one group is found.'''
+        """Raises an error if more than one group is found."""
         self.client.execute.return_value = defer.succeed(['group1', 'group2'])
 
         d = cass.get_group_by_id('group-abc')
@@ -74,10 +76,10 @@ class TestGetGroupById(_DBTestCase):
 
 
 class TestCreateGroup(_DBTestCase):
-    '''Test bobby.cass.create_group.'''
+    """Test bobby.cass.create_group."""
 
     def test_create_group(self):
-        '''Creates a group in Cassandra.'''
+        """Creates a group in Cassandra."""
         expected = {'groupId': 'group-abc',
                     'tenantId': '101010',
                     'notification': 'notification-ghi',
@@ -113,10 +115,10 @@ class TestCreateGroup(_DBTestCase):
 
 
 class TestDeleteGroup(_DBTestCase):
-    '''Test bobby.cass.delete_group.'''
+    """Test bobby.cass.delete_group."""
 
     def test_delete_group(self):
-        '''Deletes a group.'''
+        """Deletes a group."""
         self.client.execute.return_value = defer.succeed(None)
 
         d = cass.delete_group('group-abc')
@@ -129,10 +131,10 @@ class TestDeleteGroup(_DBTestCase):
 
 
 class TestGetServersByGroupId(_DBTestCase):
-    '''Test bobby.cass.get_servers_by_group_id.'''
+    """Test bobby.cass.get_servers_by_group_id."""
 
     def test_get_servers_by_group_id(self):
-        '''Returns all servers by a given group_id.'''
+        """Returns all servers by a given group_id."""
         expected = [{'serverId': 'server-abc',
                      'groupId': 'group-def',
                      'entityId': 'entity-ghi'},
@@ -152,9 +154,10 @@ class TestGetServersByGroupId(_DBTestCase):
 
 
 class TestGetServerByServerId(_DBTestCase):
-    '''Test bobby.cass.get_server_by_server_id.'''
+    """Test bobby.cass.get_server_by_server_id."""
 
     def test_get_server_by_server_id(self):
+        """Return a single server dict, rather than a single item list."""
         expected = {'serverId': 'server-abc',
                     'groupId': 'group-def',
                     'entityId': 'entity-ghi'}
@@ -170,7 +173,7 @@ class TestGetServerByServerId(_DBTestCase):
             1)
 
     def test_get_server_by_server_id_not_found(self):
-        '''Raises an error if no server is found.'''
+        """Raises an error if no server is found."""
         self.client.execute.return_value = defer.succeed([])
 
         d = cass.get_server_by_server_id('server-abc')
@@ -179,7 +182,7 @@ class TestGetServerByServerId(_DBTestCase):
         self.assertTrue(result.check(cass.ResultNotFoundError))
 
     def test_get_server_by_id_integrity_problems(self):
-        '''Raises an error if more than one group is found.'''
+        """Raises an error if more than one group is found."""
         self.client.execute.return_value = defer.succeed(['server-abc', 'server-def'])
 
         d = cass.get_server_by_server_id('server-abc')
@@ -189,10 +192,10 @@ class TestGetServerByServerId(_DBTestCase):
 
 
 class TestCreateServer(_DBTestCase):
-    '''Test bobby.cass.create_server.'''
+    """Test bobby.cass.create_server."""
 
     def test_create_server(self):
-        '''Creates and returns a server dict.'''
+        """Creates and returns a server dict."""
         expected = {'serverId': 'server-abc',
                     'groupId': 'group-def',
                     'entityId': 'entity-ghi'}
@@ -242,10 +245,10 @@ class TestCreateServer(_DBTestCase):
 
 
 class TestDeleteServer(_DBTestCase):
-    '''Test bobby.cass.delete_server.'''
+    """Test bobby.cass.delete_server."""
 
     def test_delete_server(self):
-        '''Delete and cascade to delete associated server policies.'''
+        """Delete and cascade to delete associated server policies."""
         def execute(*args, **kwargs):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
@@ -266,10 +269,10 @@ class TestDeleteServer(_DBTestCase):
 
 
 class TestGetServerPoliciesForServer(_DBTestCase):
-    '''Test bobby.cass.get_serverpolicies_for_server.'''
+    """Test bobby.cass.get_serverpolicies_for_server."""
 
     def test_get_serverpolicies_for_server(self):
-        '''Returns a list of serverpolicies for a server.'''
+        """Returns a list of serverpolicies for a server."""
         expected = [{'serverId': 'server-abc',
                      'policyId': 'policy-def',
                      'alarmId': 'alarm-ghi',
@@ -291,9 +294,10 @@ class TestGetServerPoliciesForServer(_DBTestCase):
 
 
 class TestGetPoliciesByGroupId(_DBTestCase):
-    '''Test bobby.cass.get_policies_by_group_id.'''
+    """Test bobby.cass.get_policies_by_group_id."""
 
     def test_get_policies_by_group_id(self):
+        """Gets all policies from a provided group."""
         expected = [{'policyId': 'policy-abc',
                      'groupId': 'group-def',
                      'alarmTemplateId': 'alarmTemplate-ghi',
@@ -315,10 +319,10 @@ class TestGetPoliciesByGroupId(_DBTestCase):
 
 
 class TestGetPolicyByPolicyId(_DBTestCase):
-    '''Test bobby.cass.get_policy_by_policy_id.'''
+    """Test bobby.cass.get_policy_by_policy_id."""
 
     def test_get_policy_by_policy_id(self):
-        '''Return a single policy dict, rather than a single item list.'''
+        """Return a single policy dict, rather than a single item list."""
         expected = {'policyId': 'policy-abc',
                     'groupId': 'group-def',
                     'alarmTemplateId': 'alarmTemplate-ghi',
@@ -335,7 +339,7 @@ class TestGetPolicyByPolicyId(_DBTestCase):
             1)
 
     def test_get_policy_by_policy_id_not_found(self):
-        '''Raises an error if no policy is found.'''
+        """Raises an error if no policy is found."""
         self.client.execute.return_value = defer.succeed([])
 
         d = cass.get_policy_by_policy_id('policy-abc')
@@ -344,7 +348,7 @@ class TestGetPolicyByPolicyId(_DBTestCase):
         self.assertTrue(result.check(cass.ResultNotFoundError))
 
     def test_get_policy_by_policy_id_integrity_problems(self):
-        '''Raises an error if more than one policy is found.'''
+        """Raises an error if more than one policy is found."""
         self.client.execute.return_value = defer.succeed(['policy-abc', 'policy-def'])
 
         d = cass.get_policy_by_policy_id('policy-abc')
@@ -354,10 +358,10 @@ class TestGetPolicyByPolicyId(_DBTestCase):
 
 
 class TestCreatePolicy(_DBTestCase):
-    '''Test bobby.cass.create_policy.'''
+    """Test bobby.cass.create_policy."""
 
     def test_create_policy(self):
-        '''Creates and returns a policy dict.'''
+        """Creates and returns a policy dict."""
         expected = {'policyId': 'policy-abc',
                     'groupId': 'group-def',
                     'alarmTemplateId': 'alarmTemplate-ghi',
@@ -397,10 +401,10 @@ class TestCreatePolicy(_DBTestCase):
 
 
 class TestDeletePolicy(_DBTestCase):
-    '''Test bobby.cass.delete_policy.'''
+    """Test bobby.cass.delete_policy."""
 
     def test_delete_policy(self):
-        '''Deletes a policy and cascades to associated serverpolicies.'''
+        """Deletes a policy and cascades to associated serverpolicies."""
         def execute(*args, **kwargs):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
