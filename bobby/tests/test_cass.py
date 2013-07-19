@@ -265,6 +265,31 @@ class TestDeleteServer(_DBTestCase):
         self.assertEqual(calls, self.client.execute.mock_calls)
 
 
+class TestGetServerPoliciesForServer(_DBTestCase):
+    '''Test bobby.cass.get_serverpolicies_for_server.'''
+
+    def test_get_serverpolicies_for_server(self):
+        '''Returns a list of serverpolicies for a server.'''
+        expected = [{'serverId': 'server-abc',
+                     'policyId': 'policy-def',
+                     'alarmId': 'alarm-ghi',
+                     'checkId': 'check-jkl'},
+                    {'serverId': 'server-abc',
+                     'policyId': 'policy-xyz]',
+                     'alarmId': 'alarm-uvw',
+                     'checkId': 'check-rst'}]
+        self.client.execute.return_value = defer.succeed(expected)
+
+        d = cass.get_serverpolicies_for_server('server-abc')
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;',
+            {'serverId': 'server-abc'},
+            1)
+
+
 class TestGetPoliciesByGroupId(_DBTestCase):
     '''Test bobby.cass.get_policies_by_group_id.'''
 

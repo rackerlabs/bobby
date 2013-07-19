@@ -134,6 +134,14 @@ def delete_server(server_id):
     return d.addCallback(remove_server_policies)
 
 
+def get_serverpolicies_for_server(server_id):
+    '''Get all server policies for a provided server_id.'''
+    query = 'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;'
+    return _client.execute(query,
+                           {'serverId': server_id},
+                           ConsistencyLevel.ONE)
+
+
 def get_policies_by_group_id(group_id):
     '''Get all policies owned by a provided groupId.'''
     query = 'SELECT * FROM policies WHERE "groupId"=:groupId;'
