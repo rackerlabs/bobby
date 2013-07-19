@@ -13,11 +13,11 @@ class ExcessiveResultsError(Exception):
                 type_string, type_id))
 
 
-class GroupNotFound(Exception):
+class ResultNotFoundError(Exception):
     '''Exception raised when a group is not found when querying Cassandra.'''
-    def __init__(self, group_id):
-        super(GroupNotFound, self).__init__(
-            'Group {0} not found.'.format(group_id))
+    def __init__(self, type_string, type_id):
+        super(ResultNotFoundError, self).__init__(
+            'Result of type "{0}" and id "{1}" not found.'.format(type_string, type_id))
 
 
 def get_groups_by_tenant_id(tenant_id):
@@ -33,7 +33,7 @@ def get_group_by_id(group_id):
 
     def return_group(result):
         if len(result) < 1:
-            return defer.fail(GroupNotFound(group_id))
+            return defer.fail(ResultNotFoundError('group', group_id))
         if len(result) > 1:
             return defer.fail(ExcessiveResultsError('group', group_id))
         return defer.succeed(result[0])
@@ -66,6 +66,72 @@ def delete_group(group_id):
     return _client.execute(query,
                            {'groupId': group_id},
                            ConsistencyLevel.ONE)
+
+
+def get_servers_by_group_id(group_id):
+    '''Get all servers with a specified groupId.'''
+    query = 'SELECT * FROM servers WHERE "groupId"=:groupId ALLOW FILTERING;'
+
+    return _client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
+
+
+def get_server_by_server_id(server_id):
+    '''Get a server by its serverId.'''
+
+    query = 'SELECT * FROM servers WHERE "serverId"=:serverId;'
+
+    d = _client.execute(query, {'serverId': server_id},
+                        ConsistencyLevel.ONE)
+
+    def return_server(result):
+        if len(result) < 1:
+            return defer.fail(ResultNotFoundError('server', server_id))
+        elif len(result) > 1:
+            return defer.fail(ExcessiveResultsError('server', server_id))
+        return defer.succeed(result[0])
+    return d.addCallback(return_server)
+
+
+def create_server(server_id, entity_id, group_id, server_policies):
+    query = 'INSERT INTO servers ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
+
+    d = _client.execute(query,
+                        {'serverId': server_id, 'entityId': entity_id, 'groupId': group_id},
+                        ConsistencyLevel.ONE)
+
+    def add_server_policies(_):
+        query = ' '.join([
+            'INSERT INTO serverpolicies ("serverId", "policyId",',
+            '"alarmId", "checkId", "state") VALUES (:serverId, :policyId,',
+            ':alarmId, :checkId, :state);'])
+        deferreds = []
+        for server_policy in server_policies:
+            d = _client.execute(query, {'serverId': server_id,
+                                        'policyId': server_policy['policyId'],
+                                        'alarmId': server_policy['alarmId'],
+                                        'checkId': server_policy['checkId'],
+                                        'state': 'OK'},
+                                ConsistencyLevel.ONE)
+            deferreds.append(d)
+        return defer.DeferredList(deferreds)
+    d.addCallback(add_server_policies)
+
+    def retrieve_server(_):
+        return get_server_by_server_id(server_id)
+    return d.addCallback(retrieve_server)
+
+
+def delete_server(server_id):
+    # TODO: also delete the entity is MaaS
+    query = 'DELETE FROM servers WHERE "serverId"=:serverId;'
+    d = _client.execute(query,
+                        {'serverId': server_id},
+                        ConsistencyLevel.ONE)
+
+    def remove_server_policies(_):
+        query = 'DELETE FROM serverpolicies WHERE "serverId"=:serverId;'
+        return _client.execute(query, {'serverId': server_id}, ConsistencyLevel.ONE)
+    return d.addCallback(remove_server_policies)
 
 
 _client = None
