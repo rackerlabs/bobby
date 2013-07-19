@@ -108,7 +108,12 @@ def create_server(request, tenant_id, group_id):
     server_id = content.get('serverId')
     entity_id = content.get('entityId')
 
-    d = Server.new(client, server_id, entity_id, group_id)
+    try:
+        server_policies = content.get('serverPolicies')
+    except TypeError:
+        server_policies = []
+
+    d = Server.new(client, server_id, entity_id, group_id, server_policies)
 
     def serialize(server):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -123,10 +128,16 @@ def create_server(request, tenant_id, group_id):
             ],
             'serverId': server.server_id
         }
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(201)
-        request.write(json.dumps(json_object))
-        request.finish()
+
+        d = server.view_policies()
+
+        def add_policies_and_finish(policies):
+            json_object['serverPolicies'] = policies
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(201)
+            request.write(json.dumps(json_object))
+            request.finish()
+        return d.addCallback(add_policies_and_finish)
     return d.addCallback(serialize)
 
 

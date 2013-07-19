@@ -23,7 +23,7 @@ CREATE COLUMNFAMILY policies (
     PRIMARY KEY ("groupId", "policyId")
 );
 
-CREATE COLUMNFAMILY server_policy (
+CREATE COLUMNFAMILY serverpolicies (
     "serverId" ascii,
     "policyId" ascii,
     "alarmId" ascii,

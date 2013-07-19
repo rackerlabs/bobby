@@ -101,10 +101,9 @@ class Server(object):
                                     ConsistencyLevel.ONE)
 
     def view_policies(self):
-        query = 'SELECT * FROM serverpolicy WHERE "serverId"=:serverId AND "groupId"=:groupId;'
+        query = 'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;'
         return self._client.execute(query,
-                                    {'serverId': self.server_id,
-                                     'groupId': self.group_id},
+                                    {'serverId': self.server_id},
                                     ConsistencyLevel.ONE)
 
     @classmethod
@@ -129,7 +128,8 @@ class Server(object):
         return d.addCallback(create_object)
 
     @classmethod
-    def new(Class, client, server_id, entity_id, group_id):
+    def new(Class, client, server_id, entity_id, group_id, server_policies):
+        # TODO: validate that the policies exist
         query = 'INSERT INTO servers ("serverId", "entityId", "groupId") VALUES (:serverId, :entityId, :groupId);'
 
         d = client.execute(query,
@@ -138,7 +138,24 @@ class Server(object):
                             'groupId': group_id},
                            ConsistencyLevel.ONE)
 
-        def create_server(result):
+        def add_server_policies(_):
+            query = ' '.join([
+                'INSERT INTO serverpolicies ("serverId", "policyId",',
+                '"alarmId", "checkId", "state") VALUES (:serverId, :policyId,',
+                ':alarmId, :checkId, :state);'])
+            deferreds = []
+            for server_policy in server_policies:
+                d = client.execute(query, {'serverId': server_id,
+                                           'policyId': server_policy['policyId'],
+                                           'alarmId': server_policy['alarmId'],
+                                           'checkId': server_policy['checkId'],
+                                           'state': 'OK'},
+                                   ConsistencyLevel.ONE)
+                deferreds.append(d)
+            return defer.DeferredList(deferreds)
+        d.addCallback(add_server_policies)
+
+        def create_server(_):
             return defer.succeed(Class(client, server_id, entity_id, group_id))
         return d.addCallback(create_server)
 
@@ -246,7 +263,7 @@ class ServerPolicy(object):
     @classmethod
     def new(Class, client, server_id, policy_id, alarm_id, check_id, state):
         query = " ".join((
-            'INSERT INTO serverpolicy ("serverId", "policyId", "alarmTemplateId", "checkTemplateId", "state")',
+            'INSERT INTO serverpolicies ("serverId", "policyId", "alarmTemplateId", "checkTemplateId", "state")',
             'VALUES (:serverId, :policyId, :alarmTemplateId, :checkTemplateId, :state);'
         ))
 
@@ -264,7 +281,7 @@ class ServerPolicy(object):
         return d.addCallback(create_serverpolicy)
 
     def delete(self):
-        query = 'DELETE FROM serverpolicy WHERE "serverId"=:serverId AND "policyId"=:policyId;'
+        query = 'DELETE FROM serverpolicies WHERE "serverId"=:serverId AND "policyId"=:policyId;'
 
         return self._client.execute(query,
                                     {'serverId': self.server_id,
