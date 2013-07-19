@@ -87,7 +87,7 @@ class ServerTestCase(DBTestCase):
     def test_new(self):
         self.client.execute.return_value = defer.succeed(None)
 
-        d = models.Server.new(self.client, 'server-a', 'entity-b', 'group-c')
+        d = models.Server.new(self.client, 'server-a', 'entity-b', 'group-c', [])
 
         def _assert(result):
             self.client.execute.assert_called_once_with(
@@ -123,8 +123,8 @@ class ServerTestCase(DBTestCase):
 
         def _assert(_):
             self.client.execute.assert_called_once_with(
-                'SELECT * FROM serverpolicy WHERE "serverId"=:serverId AND "groupId"=:groupId;',
-                {'serverId': 'server-l', 'groupId': 'group-n'},
+                'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;',
+                {'serverId': 'server-l'},
                 1)
         return d.addCallback(_assert)
 
@@ -178,7 +178,7 @@ class ServerPolicyTestCase(DBTestCase):
 
         def _assert(result):
             query = ' '.join((
-                'INSERT INTO serverpolicy ("serverId", "policyId", "alarmTemplateId", "checkTemplateId", "state")',
+                'INSERT INTO serverpolicies ("serverId", "policyId", "alarmTemplateId", "checkTemplateId", "state")',
                 'VALUES (:serverId, :policyId, :alarmTemplateId, :checkTemplateId, :state);'
             ))
 
@@ -199,7 +199,7 @@ class ServerPolicyTestCase(DBTestCase):
 
         def _assert(_):
             self.client.execute.assert_called_once_with(
-                'DELETE FROM serverpolicy WHERE "serverId"=:serverId AND "policyId"=:policyId;',
+                'DELETE FROM serverpolicies WHERE "serverId"=:serverId AND "policyId"=:policyId;',
                 {'serverId': 'server-z', 'policyId': 'policy-y'},
                 1)
         d.addCallback(_assert)

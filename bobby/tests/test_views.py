@@ -23,7 +23,12 @@ class BobbyDummyRequest(DummyRequest):
         super(BobbyDummyRequest, self).__init__(postpath, session)
         self.content = BobbyDummyContent(content)
 
-        self.uri = postpath
+        self._path = postpath
+
+    def URLPath(self):
+        path = mock.Mock(spec=['path'])
+        path.path = self._path
+        return path
 
 
 class GroupsTest(unittest.TestCase):
@@ -98,11 +103,14 @@ class GroupsTest(unittest.TestCase):
         group.tenant_id = group_data['tenantId']
         self.Group.new.return_value = defer.succeed(group)
 
-        request = BobbyDummyRequest('/101010/groups/')
+        request_json = {
+            'groupId': 'uvwxyz',
+            'notification': 'notification-abc',
+            'notificationPlan': 'notification-def'
+        }
+        request = BobbyDummyRequest('/101010/groups/',
+                                    content=json.dumps(request_json))
         request.method = 'POST'
-        request.args['groupId'] = [group_data['groupId']]
-        request.args['notification'] = [group_data['notification']]
-        request.args['notificationPlan'] = [group_data['notificationPlan']]
 
         d = views.create_group(request, 010101)
 
@@ -207,17 +215,31 @@ class ServersTest(unittest.TestCase):
                     'rel': 'self'
                 }
             ],
-            'serverId': 'server-rst'
+            'serverId': 'server-rst',
+            'serverPolicies': [
+                {'policyId': 'policy-xyz',
+                 'alarmId': 'alarm-rst',
+                 'checkId': 'check-uvw'}
+            ]
         }
+        self.server.view_policies.return_value = defer.succeed(server_data['serverPolicies'])
 
         self.server.entity_id = server_data['entityId']
         self.server.group_id = server_data['groupId']
         self.server.server_id = server_data['serverId']
 
-        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/')
+        request_json = {
+            'entityId': 'entity-xyz',
+            'serverId': 'server-rst',
+            'serverPolicies': [
+                {'policyId': 'policy-xyz',
+                 'alarmId': 'alarm-rst',
+                 'checkId': 'check-uvw'}
+            ]
+        }
+        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/',
+                                    content=json.dumps(request_json))
         request.method = 'POST'
-        request.args['entityId'] = [server_data['entityId']]
-        request.args['serverId'] = [server_data['serverId']]
 
         d = views.create_server(request, '101010', server_data['groupId'])
 
@@ -339,11 +361,14 @@ class PoliciesTest(unittest.TestCase):
         self.policy.group_id = policy_data['groupId']
         self.policy.policy_id = policy_data['policyId']
 
-        request = BobbyDummyRequest('/101010/groups/group-def/policies/')
+        request_json = {
+            'alarmTemplateId': 'alarm-template-jkl',
+            'checkTemplateId': 'check-template-ghi',
+            'policyId': 'policy-abc'
+        }
+        request = BobbyDummyRequest('/101010/groups/group-def/policies/',
+                                    content=json.dumps(request_json))
         request.method = 'POST'
-        request.args['alarmTemplateId'] = [policy_data['alarmTemplateId']]
-        request.args['checkTemplateId'] = [policy_data['checkTemplateId']]
-        request.args['policyId'] = [policy_data['policyId']]
 
         d = views.create_policy(request, '101010', policy_data['groupId'])
 
