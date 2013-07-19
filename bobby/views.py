@@ -20,6 +20,7 @@ def get_groups(request, tenant_id):
 
     def _return_result(groups):
         result = {'groups': groups}
+        request.setHeader('Content-Type', 'application/json')
         request.write(json.dumps(result))
         request.finish()
     return d.addCallback(_return_result)
@@ -27,9 +28,10 @@ def get_groups(request, tenant_id):
 
 @app.route('/<string:tenant_id>/groups', methods=['POST'])
 def create_group(request, tenant_id):
-    group_id = request.args.get('groupId')[0]
-    notification = request.args.get('notification')[0]
-    notification_plan = request.args.get('notificationPlan')[0]
+    content = json.loads(request.content.read())
+    group_id = content.get('groupId')
+    notification = content.get('notification')
+    notification_plan = content.get('notificationPlan')
 
     d = Group.new(client, group_id, tenant_id, notification, notification_plan)
 
@@ -38,13 +40,14 @@ def create_group(request, tenant_id):
         json_object = {
             'groupId': group.group_id,
             'links': [{
-                'href': '{0}{1}'.format(request.postpath, group.group_id),
+                'href': '{0}{1}'.format(request.URLPath().path, group.group_id),
                 'rel': 'self'
             }],
             'notification': group.notification,
             'notificationPlan': group.notification_plan,
             'tenantId': group.tenant_id
         }
+        request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(201)
         request.write(json.dumps(json_object))
         request.finish()
@@ -59,13 +62,14 @@ def get_group(request, tenant_id, group_id):
         json_object = {
             'groupId': group.group_id,
             'links': [{
-                'href': '{0}'.format(request.postpath),
+                'href': '{0}'.format(request.URLPath().path),
                 'rel': 'self'
             }],
             'notification': group.notification,
             'notificationPlan': group.notification_plan,
             'tenantId': group.tenant_id
         }
+        request.setHeader('Content-Type', 'application/json')
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(serialize_group)
@@ -80,6 +84,7 @@ def delete_group(request, tenant_id, group_id):
     d.addCallback(delete_group)
 
     def finish(_):
+        request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(204)
         request.finish()
     return d.addCallback(finish)
@@ -91,6 +96,7 @@ def get_servers(request, tenant_id, group_id):
 
     def serialize(servers):
         result = {'servers': servers}
+        request.setHeader('Content-Type', 'application/json')
         request.write(json.dumps(result))
         request.finish()
     return d.addCallback(serialize)
@@ -98,8 +104,9 @@ def get_servers(request, tenant_id, group_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['POST'])
 def create_server(request, tenant_id, group_id):
-    server_id = request.args.get('serverId')[0]
-    entity_id = request.args.get('entityId')[0]
+    content = json.loads(request.content.read())
+    server_id = content.get('serverId')
+    entity_id = content.get('entityId')
 
     d = Server.new(client, server_id, entity_id, group_id)
 
@@ -110,12 +117,13 @@ def create_server(request, tenant_id, group_id):
             'groupId': server.group_id,
             'links': [
                 {
-                    'href': '{0}{1}'.format(request.uri, server.server_id),
+                    'href': '{0}{1}'.format(request.URLPath().path, server.server_id),
                     'rel': 'self'
                 }
             ],
             'serverId': server.server_id
         }
+        request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(201)
         request.write(json.dumps(json_object))
         request.finish()
@@ -132,12 +140,13 @@ def get_server(request, tenant_id, group_id, server_id):
             'groupId': server.group_id,
             'links': [
                 {
-                    'href': '{0}'.format(request.postpath),
+                    'href': '{0}'.format(request.URLPath().path),
                     'rel': 'self'
                 }
             ],
             'serverId': server.server_id
         }
+        request.setHeader('Content-Type', 'application/json')
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(serialize)
@@ -152,6 +161,7 @@ def delete_server(request, tenant_id, group_id, server_id):
     d.addCallback(delete_server)
 
     def finish(_):
+        request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(204)
         request.finish()
     return d.addCallback(finish)
@@ -163,6 +173,7 @@ def get_policies(request, tenant_id, group_id):
 
     def serialize(policies):
         result = {'policies': policies}
+        request.setHeader('Content-Type', 'application/json')
         request.write(json.dumps(result))
         request.finish()
     return d.addCallback(serialize)
@@ -170,9 +181,10 @@ def get_policies(request, tenant_id, group_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['POST'])
 def create_policy(request, tenant_id, group_id):
-    alarm_template_id = request.args.get('alarmTemplateId')[0]
-    check_template_id = request.args.get('checkTemplateId')[0]
-    policy_id = request.args.get('policyId')[0]
+    content = json.loads(request.content.read())
+    alarm_template_id = content.get('alarmTemplateId')
+    check_template_id = content.get('checkTemplateId')
+    policy_id = content.get('policyId')
 
     d = Policy.new(client, policy_id, group_id, alarm_template_id, check_template_id)
 
@@ -184,12 +196,13 @@ def create_policy(request, tenant_id, group_id):
             'groupId': policy.group_id,
             'links': [
                 {
-                    'href': '{0}{1}'.format(request.postpath, policy.policy_id),
+                    'href': '{0}{1}'.format(request.URLPath().path, policy.policy_id),
                     'rel': 'self'
                 }
             ],
             'policyId': policy.policy_id
         }
+        request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(201)
         request.write(json.dumps(json_object))
         request.finish()
@@ -208,13 +221,13 @@ def get_policy(request, tenant_id, group_id, policy_id):
             'groupId': policy.group_id,
             'links': [
                 {
-                    'href': '{0}'.format(request.postpath),
+                    'href': '{0}'.format(request.URLPath().path),
                     'rel': 'self'
                 }
             ],
             'policyId': policy.policy_id
         }
-
+        request.setHeader('Content-Type', 'application/json')
         request.write(json.dumps(json_object))
         request.finish()
     return d.addCallback(serialize)
@@ -229,6 +242,7 @@ def delete_policy(request, tenant_id, group_id, policy_id):
     d.addCallback(delete)
 
     def finish(_):
+        request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(204)
         request.finish()
     return d.addCallback(finish)
