@@ -263,3 +263,133 @@ class TestDeleteServer(_DBTestCase):
                 {'serverId': 'server-abc'}, 1),
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)
+
+
+class TestGetPoliciesByGroupId(_DBTestCase):
+    '''Test bobby.cass.get_policies_by_group_id.'''
+
+    def test_get_policies_by_group_id(self):
+        expected = [{'policyId': 'policy-abc',
+                     'groupId': 'group-def',
+                     'alarmTemplateId': 'alarmTemplate-ghi',
+                     'checkTemplateId': 'checkTemplate-jkl'},
+                    {'policyId': 'policy-xyz',
+                     'groupId': 'group-def',
+                     'alarmTemplateId': 'alarmTemplate-uvw',
+                     'checkTemplateId': 'checkTemplate-rst'}]
+        self.client.execute.return_value = defer.succeed(expected)
+
+        d = cass.get_policies_by_group_id('group-def')
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM policies WHERE "groupId"=:groupId;',
+            {'groupId': 'group-def'},
+            1)
+
+
+class TestGetPolicyByPolicyId(_DBTestCase):
+    '''Test bobby.cass.get_policy_by_policy_id.'''
+
+    def test_get_policy_by_policy_id(self):
+        '''Return a single policy dict, rather than a single item list.'''
+        expected = {'policyId': 'policy-abc',
+                    'groupId': 'group-def',
+                    'alarmTemplateId': 'alarmTemplate-ghi',
+                    'checkTemplateId': 'checkTemplate-jkl'}
+        self.client.execute.return_value = defer.succeed([expected])
+
+        d = cass.get_policy_by_policy_id('policy-abc')
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;',
+            {'policyId': 'policy-abc'},
+            1)
+
+    def test_get_policy_by_policy_id_not_found(self):
+        '''Raises an error if no policy is found.'''
+        self.client.execute.return_value = defer.succeed([])
+
+        d = cass.get_policy_by_policy_id('policy-abc')
+
+        result = self.failureResultOf(d)
+        self.assertTrue(result.check(cass.ResultNotFoundError))
+
+    def test_get_policy_by_policy_id_integrity_problems(self):
+        '''Raises an error if more than one policy is found.'''
+        self.client.execute.return_value = defer.succeed(['policy-abc', 'policy-def'])
+
+        d = cass.get_policy_by_policy_id('policy-abc')
+
+        result = self.failureResultOf(d)
+        self.assertTrue(result.check(cass.ExcessiveResultsError))
+
+
+class TestCreatePolicy(_DBTestCase):
+    '''Test bobby.cass.create_policy.'''
+
+    def test_create_policy(self):
+        '''Creates and returns a policy dict.'''
+        expected = {'policyId': 'policy-abc',
+                    'groupId': 'group-def',
+                    'alarmTemplateId': 'alarmTemplate-ghi',
+                    'checkTemplateId': 'checkTemplate-jkl'}
+
+        def execute(query, data, consistency):
+            if 'INSERT' in query:
+                return defer.succeed(None)
+            elif 'SELECT' in query:
+                return defer.succeed([expected])
+        self.client.execute.side_effect = execute
+
+        d = cass.create_policy(expected['policyId'], expected['groupId'],
+                               expected['alarmTemplateId'],
+                               expected['checkTemplateId'])
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+
+        calls = [
+            mock.call(
+                ' '.join([
+                    'INSERT INTO policies',
+                    '("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
+                    'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);']),
+                {'alarmTemplateId': 'alarmTemplate-ghi',
+                 'checkTemplateId': 'checkTemplate-jkl',
+                 'policyId': 'policy-abc',
+                 'groupId': 'group-def'},
+                1),
+            mock.call(
+                'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;',
+                {'policyId': 'policy-abc'},
+                1)
+        ]
+        self.assertEqual(self.client.execute.mock_calls, calls)
+
+
+class TestDeletePolicy(_DBTestCase):
+    '''Test bobby.cass.delete_policy.'''
+
+    def test_delete_policy(self):
+        '''Deletes a policy and cascades to associated serverpolicies.'''
+        def execute(*args, **kwargs):
+            return defer.succeed(None)
+        self.client.execute.side_effect = execute
+
+        d = cass.delete_policy('policy-abc')
+
+        self.successResultOf(d)
+
+        calls = [
+            mock.call(
+                'DELETE FROM policies WHERE "policyId"=:policyId;',
+                {'policyId': 'policy-abc'}, 1),
+            mock.call(
+                'DELETE FROM serverpolicies WHERE "policyId"=:policyId;',
+                {'policyId': 'policy-abc'}, 1),
+        ]
+        self.assertEqual(calls, self.client.execute.mock_calls)

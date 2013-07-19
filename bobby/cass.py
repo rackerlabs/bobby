@@ -134,6 +134,61 @@ def delete_server(server_id):
     return d.addCallback(remove_server_policies)
 
 
+def get_policies_by_group_id(group_id):
+    '''Get all policies owned by a provided groupId.'''
+    query = 'SELECT * FROM policies WHERE "groupId"=:groupId;'
+    return _client.execute(query, {'groupId': group_id},
+                           ConsistencyLevel.ONE)
+
+
+def get_policy_by_policy_id(policy_id):
+    '''Get a single policy by its policyId.'''
+    query = 'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;'
+
+    d = _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
+
+    def return_policy(result):
+        if len(result) < 1:
+            return defer.fail(ResultNotFoundError('policy', policy_id))
+        if len(result) > 1:
+            return defer.fail(ExcessiveResultsError('policy', policy_id))
+        return defer.succeed(result[0])
+    return d.addCallback(return_policy)
+
+
+def create_policy(policy_id, group_id, alarm_template_id, check_template_id):
+    '''Create and return a policy.'''
+    query = ' '.join((
+        'INSERT INTO policies ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
+        'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);'
+    ))
+
+    d = _client.execute(query,
+                        {'policyId': policy_id,
+                         'groupId': group_id,
+                         'alarmTemplateId': alarm_template_id,
+                         'checkTemplateId': check_template_id},
+                        ConsistencyLevel.ONE)
+
+    def retrieve_policy(_):
+        return get_policy_by_policy_id(policy_id)
+    return d.addCallback(retrieve_policy)
+
+
+def delete_policy(policy_id):
+    '''Delete a policy and associated serverpolicies.'''
+    query = 'DELETE FROM policies WHERE "policyId"=:policyId;'
+
+    d = _client.execute(query,
+                        {'policyId': policy_id},
+                        ConsistencyLevel.ONE)
+
+    def remove_server_policies(_):
+        query = 'DELETE FROM serverpolicies WHERE "policyId"=:policyId;'
+        return _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
+    return d.addCallback(remove_server_policies)
+
+
 _client = None
 
 
