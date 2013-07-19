@@ -13,6 +13,7 @@ class _DBTestCase(unittest.TestCase):
 
     def setUp(self):
         self.client = mock.create_autospec(CQLClient)
+        cass.set_client(self.client)
 
 
 class TestGetGroupsByTenantId(_DBTestCase):
@@ -23,7 +24,7 @@ class TestGetGroupsByTenantId(_DBTestCase):
         expected = []
         self.client.execute.return_value = defer.succeed(expected)
 
-        d = cass.get_groups_by_tenant_id(self.client, '101010')
+        d = cass.get_groups_by_tenant_id('101010')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -44,7 +45,7 @@ class TestGetGroupById(_DBTestCase):
                     'notificationPlan': 'notificationPlan-jkl'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_group_by_id(self.client, 'group-abc')
+        d = cass.get_group_by_id('group-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -57,7 +58,7 @@ class TestGetGroupById(_DBTestCase):
         '''Raises an error if no group is found.'''
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_group_by_id(self.client, 'group-abc')
+        d = cass.get_group_by_id('group-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.GroupNotFound))
@@ -66,7 +67,7 @@ class TestGetGroupById(_DBTestCase):
         '''Raises an error if more than one group is found.'''
         self.client.execute.return_value = defer.succeed(['group1', 'group2'])
 
-        d = cass.get_group_by_id(self.client, 'group-abc')
+        d = cass.get_group_by_id('group-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
@@ -89,7 +90,7 @@ class TestCreateGroup(_DBTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = cass.create_group(self.client, expected['groupId'], expected['tenantId'],
+        d = cass.create_group(expected['groupId'], expected['tenantId'],
                               expected['notification'], expected['notificationPlan'])
 
         result = self.successResultOf(d)
@@ -118,7 +119,7 @@ class TestDeleteGroup(_DBTestCase):
         '''Deletes a group.'''
         self.client.execute.return_value = defer.succeed(None)
 
-        d = cass.delete_group(self.client, 'group-abc')
+        d = cass.delete_group('group-abc')
 
         self.successResultOf(d)
         self.client.execute.assert_called_once_with(

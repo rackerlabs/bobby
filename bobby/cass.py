@@ -20,16 +20,16 @@ class GroupNotFound(Exception):
             'Group {0} not found.'.format(group_id))
 
 
-def get_groups_by_tenant_id(client, tenant_id):
+def get_groups_by_tenant_id(tenant_id):
     '''Get all groups owned by a provided tenant.'''
     query = 'SELECT * FROM groups WHERE "tenantId"=:tenantId ALLOW FILTERING;'
-    return client.execute(query, {'tenantId': tenant_id}, ConsistencyLevel.ONE)
+    return _client.execute(query, {'tenantId': tenant_id}, ConsistencyLevel.ONE)
 
 
-def get_group_by_id(client, group_id):
+def get_group_by_id(group_id):
     '''Get a group by its id.'''
     query = 'SELECT * FROM groups WHERE "groupId"=:groupId;'
-    d = client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
+    d = _client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
 
     def return_group(result):
         if len(result) < 1:
@@ -40,7 +40,7 @@ def get_group_by_id(client, group_id):
     return d.addCallback(return_group)
 
 
-def create_group(client, group_id, tenant_id, notification, notification_plan):
+def create_group(group_id, tenant_id, notification, notification_plan):
     '''Create a new group and return that new group.'''
 
     query = ' '.join([
@@ -53,16 +53,24 @@ def create_group(client, group_id, tenant_id, notification, notification_plan):
             'notification': notification,
             'notificationPlan': notification_plan}
 
-    d = client.execute(query, data, ConsistencyLevel.ONE)
+    d = _client.execute(query, data, ConsistencyLevel.ONE)
 
     def retrieve_new_group(_):
-        return get_group_by_id(client, group_id)
+        return get_group_by_id(group_id)
     return d.addCallback(retrieve_new_group)
 
 
-def delete_group(client, group_id):
+def delete_group(group_id):
     '''Delete a group.'''
     query = 'DELETE FROM groups WHERE "groupId"=:groupId;'
-    return client.execute(query,
-                          {'groupId': group_id},
-                          ConsistencyLevel.ONE)
+    return _client.execute(query,
+                           {'groupId': group_id},
+                           ConsistencyLevel.ONE)
+
+
+_client = None
+
+
+def set_client(client):
+    global _client
+    _client = client
