@@ -1,3 +1,4 @@
+"""Tests for bobby.views."""
 import json
 
 import mock
@@ -5,19 +6,22 @@ from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.web.test.requesthelper import DummyRequest
 
-from bobby import models, views
+from bobby import views
 
 
 class BobbyDummyContent(object):
+    """Dummy content object."""
 
     def __init__(self, content=''):
         self._content = content
 
     def read(self):
+        """Fake read method, emulating StringIO."""
         return self._content
 
 
 class BobbyDummyRequest(DummyRequest):
+    """Dummy request object."""
 
     def __init__(self, postpath, session=None, content=''):
         super(BobbyDummyRequest, self).__init__(postpath, session)
@@ -26,30 +30,18 @@ class BobbyDummyRequest(DummyRequest):
         self._path = postpath
 
     def URLPath(self):
+        """Fake URLPath object."""
         path = mock.Mock(spec=['path'])
         path.path = self._path
         return path
 
 
-class GroupsTest(unittest.TestCase):
-    '''Test /{tenantId}/groups'''
+class TestGetGroups(unittest.TestCase):
+    """Test GET /{tenantId}/groups"""
 
-    def setUp(self):
-        # Ew. Need to move that client connection out of views soon.
-        client_patcher = mock.patch('bobby.views.client')
-        self.addCleanup(client_patcher.stop)
-        self.client = client_patcher.start()
-
-        Group_patcher = mock.patch(
-            'bobby.views.Group',
-            spec=['get_by_group_id', 'get_all_by_tenant_id', 'new'])
-        self.addCleanup(Group_patcher.stop)
-        self.Group = Group_patcher.start()
-
-        self.group = mock.create_autospec(models.Group)
-        self.Group.return_value = self.group
-
-    def test_get_groups(self):
+    @mock.patch('bobby.cass.get_groups_by_tenant_id')
+    def test_get_groups(self, get_groups_by_tenant_id):
+        """Returns application/json of all groups."""
         groups = [
             {'groupId': 'abcdef',
              'links': [
@@ -76,16 +68,24 @@ class GroupsTest(unittest.TestCase):
              }
         ]
         expected = {'groups': groups}
-        self.Group.get_all_by_tenant_id.return_value = defer.succeed(groups)
+        get_groups_by_tenant_id.return_value = defer.succeed(groups)
+
         request = BobbyDummyRequest('/101010/groups')
         d = views.get_groups(request, '101010')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
+        get_groups_by_tenant_id.assert_called_once_with('101010')
 
-    def test_create_group(self):
-        group_data = {
+
+class TestCreateGroup(unittest.TestCase):
+    """Test POST /{tenantId}/groups"""
+
+    @mock.patch('bobby.cass.create_group')
+    def test_create_group(self, create_group):
+        """POST to /{tenantId}/groups creates a new group."""
+        expected = {
             'groupId': 'uvwxyz',
             'links': [{
                 'href': '/101010/groups/uvwxyz',
@@ -95,13 +95,9 @@ class GroupsTest(unittest.TestCase):
             'notificationPlan': 'notification-def',
             'tenantId': 'tenant-ghi'
         }
-
-        group = mock.create_autospec(models.Group)
-        group.group_id = group_data['groupId']
-        group.notification = group_data['notification']
-        group.notification_plan = group_data['notificationPlan']
-        group.tenant_id = group_data['tenantId']
-        self.Group.new.return_value = defer.succeed(group)
+        group = expected.copy()
+        del group['links']
+        create_group.return_value = defer.succeed(group)
 
         request_json = {
             'groupId': 'uvwxyz',
@@ -112,14 +108,22 @@ class GroupsTest(unittest.TestCase):
                                     content=json.dumps(request_json))
         request.method = 'POST'
 
-        d = views.create_group(request, 010101)
+        d = views.create_group(request, '010101')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
-        self.assertEqual(result, group_data)
+        self.assertEqual(result, expected)
+        create_group.assert_called_once_with(
+            'uvwxyz', '010101', 'notification-abc', 'notification-def')
 
-    def test_get_group(self):
-        group_data = {
+
+class TestGetGroup(unittest.TestCase):
+    """Test GET /{tenantId}/groups/{groupId}"""
+
+    @mock.patch('bobby.cass.get_group_by_id')
+    def test_get_group(self, get_group_by_id):
+        """Returns application/json of group representation."""
+        expected = {
             'groupId': 'uvwxyz',
             'links': [{
                 'href': '/101010/groups/uvwxyz',
@@ -129,53 +133,40 @@ class GroupsTest(unittest.TestCase):
             'notificationPlan': 'notification-def',
             'tenantId': 'tenant-ghi'
         }
-
-        group = mock.create_autospec(models.Group)
-        group.group_id = group_data['groupId']
-        group.notification = group_data['notification']
-        group.notification_plan = group_data['notificationPlan']
-        group.tenant_id = group_data['tenantId']
-        self.Group.get_by_group_id.return_value = defer.succeed(group)
+        group = expected.copy()
+        del group['links']
+        get_group_by_id.return_value = defer.succeed(group)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz')
-
         d = views.get_group(request, '101010', 'uvwxyz')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
-        self.assertEqual(result, group_data)
+        self.assertEqual(result, expected)
 
-    def test_delete_group(self):
-        self.Group.get_by_group_id.return_value = defer.succeed(self.group)
+
+class TestDeleteGroup(unittest.TestCase):
+    """Test DELETE /{tenantId}/groups/{groupId}"""
+
+    @mock.patch('bobby.cass.delete_group')
+    def test_delete_group(self, delete_group):
+        """Deletes a server, returning a 204."""
+        delete_group.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz')
         d = views.delete_group(request, '101010', 'uvwxyz')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        self.group.delete.assert_called_once_with()
+        delete_group.assert_called_once_with('uvwxyz')
 
 
-class ServersTest(unittest.TestCase):
-    '''Test /{tenantId}/groups/{groupId}/servers'''
+class TestGetServers(unittest.TestCase):
+    """Test GET /{tenantId}/groups/{groupId}."""
 
-    def setUp(self):
-        # Ew. Need to move that client connection out of views soon.
-        client_patcher = mock.patch('bobby.views.client')
-        self.addCleanup(client_patcher.stop)
-        self.client = client_patcher.start()
-
-        Server_patcher = mock.patch(
-            'bobby.views.Server',
-            spec=['get_all_by_group_id', 'get_by_server_id', 'new'])
-        self.addCleanup(Server_patcher.stop)
-        self.Server = Server_patcher.start()
-
-        self.server = mock.create_autospec(models.Server)
-        self.Server.return_value = self.server
-        self.Server.new.return_value = defer.succeed(self.server)
-
-    def test_get_servers(self):
+    @mock.patch('bobby.cass.get_servers_by_group_id')
+    def test_get_servers(self, get_servers_by_group_id):
+        """Returns application/json of all servers owned by a group."""
         servers = [
             {'entityId': 'entity-abc',
              'groupId': 'group-def',
@@ -197,7 +188,8 @@ class ServersTest(unittest.TestCase):
              'serverId': 'server-mno'},
         ]
         expected = {'servers': servers}
-        self.Server.get_all_by_group_id.return_value = defer.succeed(servers)
+        get_servers_by_group_id.return_value = defer.succeed(servers)
+
         request = BobbyDummyRequest('/101010/groups/group-def/servers')
         d = views.get_servers(request, '101010', 'group-def')
 
@@ -205,8 +197,15 @@ class ServersTest(unittest.TestCase):
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
-    def test_create_server(self):
-        server_data = {
+
+class TestCreateServer(unittest.TestCase):
+    """Test POST /{tenantId}/groups"""
+
+    @mock.patch('bobby.cass.get_serverpolicies_for_server')
+    @mock.patch('bobby.cass.create_server')
+    def test_create_server(self, create_server, get_serverpolicies_for_server):
+        """POSTing application/json creates a server."""
+        expected = {
             'entityId': 'entity-xyz',
             'groupId': 'group-uvw',
             'links': [
@@ -222,11 +221,12 @@ class ServersTest(unittest.TestCase):
                  'checkId': 'check-uvw'}
             ]
         }
-        self.server.view_policies.return_value = defer.succeed(server_data['serverPolicies'])
-
-        self.server.entity_id = server_data['entityId']
-        self.server.group_id = server_data['groupId']
-        self.server.server_id = server_data['serverId']
+        server = expected.copy()
+        del server['links']
+        del server['serverPolicies']
+        serverpolicies = expected['serverPolicies']
+        create_server.return_value = defer.succeed(server)
+        get_serverpolicies_for_server.return_value = defer.succeed(serverpolicies)
 
         request_json = {
             'entityId': 'entity-xyz',
@@ -241,14 +241,20 @@ class ServersTest(unittest.TestCase):
                                     content=json.dumps(request_json))
         request.method = 'POST'
 
-        d = views.create_server(request, '101010', server_data['groupId'])
+        d = views.create_server(request, '101010', server['groupId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
-        self.assertEqual(result, server_data)
+        self.assertEqual(result, expected)
 
-    def test_get_server(self):
-        server_data = {
+
+class TestGetServer(unittest.TestCase):
+    """Test GET /{tenantId}/groups/{groupId}/servers/{serverId}"""
+
+    @mock.patch('bobby.cass.get_server_by_server_id')
+    def test_get_server(self, get_server_by_server_id):
+        """Return application/json server representation."""
+        expected = {
             'entityId': 'entity-xyz',
             'groupId': 'group-uvw',
             'links': [
@@ -259,50 +265,40 @@ class ServersTest(unittest.TestCase):
             ],
             'serverId': 'server-rst'
         }
-        self.server.entity_id = server_data['entityId']
-        self.server.group_id = server_data['groupId']
-        self.server.server_id = server_data['serverId']
-        self.Server.get_by_server_id.return_value = defer.succeed(self.server)
+        server = expected.copy()
+        del server['links']
+        get_server_by_server_id.return_value = defer.succeed(server)
 
         request = BobbyDummyRequest('/101010/groups/group-uvw/servers/server-rst')
-        d = views.get_server(request, '101010', server_data['groupId'], server_data['serverId'])
+        d = views.get_server(request, '101010', server['groupId'], server['serverId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
-        self.assertEqual(result, server_data)
+        self.assertEqual(result, expected)
 
-    def test_delete_server(self):
-        self.Server.get_by_server_id.return_value = defer.succeed(self.server)
+
+class TestDeleteServer(unittest.TestCase):
+    """Test DELETE /{tenantId}/groups/{groupId}/servers/{serverId}"""
+
+    @mock.patch('bobby.cass.delete_server')
+    def test_delete_server(self, delete_server):
+        """Deletes a server and returns 402."""
+        delete_server.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz/servers/opqrst')
         d = views.delete_server(request, '101010', 'uvwxyz', 'opqrst')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        self.server.delete.assert_called_once_with()
+        delete_server.assert_called_once_with('opqrst')
 
 
-class PoliciesTest(unittest.TestCase):
-    '''Test /{tenantId}/groups/{groupId}/servers'''
+class TestGetPolicies(unittest.TestCase):
+    """Test GET /{tenantId}/groups/{groupId}."""
 
-    def setUp(self):
-        # Ew. Need to move that client connection out of views soon.
-        client_patcher = mock.patch('bobby.views.client')
-        self.addCleanup(client_patcher.stop)
-        self.client = client_patcher.start()
-
-        Policy_patcher = mock.patch(
-            'bobby.views.Policy',
-            spec=['get_all_by_group_id', 'get_by_policy_id', 'new'])
-        self.addCleanup(Policy_patcher.stop)
-        self.Policy = Policy_patcher.start()
-
-        self.policy = mock.create_autospec(models.Policy)
-        self.Policy.return_value = self.policy
-        self.Policy.get_by_policy_id.return_value = defer.succeed(self.policy)
-        self.Policy.new.return_value = defer.succeed(self.policy)
-
-    def test_get_policies(self):
+    @mock.patch('bobby.cass.get_policies_by_group_id')
+    def test_get_policies(self, get_policies_by_group_id):
+        """Returns application/json of all policies owned by a group."""
         policies = [
             {
                 'alarmTemplateId': '{alarmTemplateId1}',
@@ -332,7 +328,7 @@ class PoliciesTest(unittest.TestCase):
             }
         ]
         expected = {'policies': policies}
-        self.Policy.get_all_by_group_id.return_value = defer.succeed(policies)
+        get_policies_by_group_id.return_value = defer.succeed(policies)
 
         request = BobbyDummyRequest('/101010/groups/group-def/policies')
         d = views.get_policies(request, '101010', 'group-def')
@@ -341,8 +337,14 @@ class PoliciesTest(unittest.TestCase):
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
-    def test_create_policy(self):
-        policy_data = {
+
+class TestCreatePolicy(unittest.TestCase):
+    """Test POST /{tenantId}/groups/{groupId}/policies"""
+
+    @mock.patch('bobby.cass.create_policy')
+    def test_create_server(self, create_policy):
+        """POSTing application/json creates a policy."""
+        expected = {
             'alarmTemplateId': 'alarm-template-jkl',
             'checkTemplateId': 'check-template-ghi',
             'groupId': 'group-def',
@@ -355,11 +357,9 @@ class PoliciesTest(unittest.TestCase):
             ],
             'policyId': 'policy-abc'
         }
-
-        self.policy.alarm_template_id = policy_data['alarmTemplateId']
-        self.policy.check_template_id = policy_data['checkTemplateId']
-        self.policy.group_id = policy_data['groupId']
-        self.policy.policy_id = policy_data['policyId']
+        policy = expected.copy()
+        del policy['links']
+        create_policy.return_value = defer.succeed(policy)
 
         request_json = {
             'alarmTemplateId': 'alarm-template-jkl',
@@ -370,14 +370,20 @@ class PoliciesTest(unittest.TestCase):
                                     content=json.dumps(request_json))
         request.method = 'POST'
 
-        d = views.create_policy(request, '101010', policy_data['groupId'])
+        d = views.create_policy(request, '101010', policy['groupId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
-        self.assertEqual(result, policy_data)
+        self.assertEqual(result, expected)
 
-    def test_get_policy(self):
-        policy_data = {
+
+class TestGetPolicy(unittest.TestCase):
+    """Test GET /{tenantId}/groups/{groupId}/policies/{serverId}"""
+
+    @mock.patch('bobby.cass.get_policy_by_policy_id')
+    def test_get_server(self, get_policy_by_policy_id):
+        """Return application/json policy representation."""
+        expected = {
             'alarmTemplateId': 'alarm-template-jkl',
             'checkTemplateId': 'check-template-ghi',
             'groupId': 'group-def',
@@ -390,23 +396,29 @@ class PoliciesTest(unittest.TestCase):
             ],
             'policyId': 'policy-abc'
         }
-
-        self.policy.alarm_template_id = policy_data['alarmTemplateId']
-        self.policy.check_template_id = policy_data['checkTemplateId']
-        self.policy.group_id = policy_data['groupId']
-        self.policy.policy_id = policy_data['policyId']
+        policy = expected.copy()
+        del policy['links']
+        get_policy_by_policy_id.return_value = defer.succeed(policy)
 
         request = BobbyDummyRequest('/101010/groups/group-def/policies/policy-abc')
-        d = views.get_policy(request, '101010', policy_data['groupId'], policy_data['policyId'])
+        d = views.get_policy(request, '101010', policy['groupId'], policy['policyId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
-        self.assertEqual(result, policy_data)
+        self.assertEqual(result, expected)
 
-    def test_delete_policy(self):
+
+class TestDeletePolicy(unittest.TestCase):
+    """Test DELETE /{tenantId}/groups/{groupId}/policiess/{policyId}"""
+
+    @mock.patch('bobby.cass.delete_policy')
+    def test_delete_server(self, delete_policy):
+        """Deletes a policy and returns 402."""
+        delete_policy.return_value = defer.succeed(None)
+
         request = BobbyDummyRequest('/101010/groups/uvwxyz/policies/opqrst')
         d = views.delete_policy(request, '101010', 'uvwxyz', 'opqrst')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        self.policy.delete.assert_called_once_with()
+        delete_policy.assert_called_once_with('opqrst')
