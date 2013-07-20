@@ -20,7 +20,7 @@ CREATE COLUMNFAMILY policies (
     "policyId" ascii, /* Provided by otter */
     "alarmTemplateId" ascii, /* Provided by otter */
     "checkTemplateId" ascii, /* Provided by otter */
-    PRIMARY KEY ("groupId", "policyId")
+    PRIMARY KEY ("policyId", "groupId")
 );
 
 CREATE COLUMNFAMILY serverpolicies (

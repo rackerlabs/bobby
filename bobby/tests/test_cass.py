@@ -313,7 +313,7 @@ class TestGetPoliciesByGroupId(_DBTestCase):
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM policies WHERE "groupId"=:groupId;',
+            'SELECT * FROM policies WHERE "groupId"=:groupId ALLOW FILTERING;',
             {'groupId': 'group-def'},
             1)
 
@@ -413,12 +413,14 @@ class TestDeletePolicy(_DBTestCase):
 
         self.successResultOf(d)
 
+        # TODO: re-enable this. See implementation for why it's currently
+        # disabled.
         calls = [
             mock.call(
                 'DELETE FROM policies WHERE "policyId"=:policyId;',
                 {'policyId': 'policy-abc'}, 1),
-            mock.call(
-                'DELETE FROM serverpolicies WHERE "policyId"=:policyId;',
-                {'policyId': 'policy-abc'}, 1),
+            #mock.call(
+            #    'DELETE FROM serverpolicies WHERE "policyId"=:policyId;',
+            #    {'policyId': 'policy-abc'}, 1),
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)

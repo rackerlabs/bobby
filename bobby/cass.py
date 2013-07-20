@@ -148,7 +148,7 @@ def get_serverpolicies_for_server(server_id):
 
 def get_policies_by_group_id(group_id):
     """Get all policies owned by a provided groupId."""
-    query = 'SELECT * FROM policies WHERE "groupId"=:groupId;'
+    query = 'SELECT * FROM policies WHERE "groupId"=:groupId ALLOW FILTERING;'
     return _client.execute(query, {'groupId': group_id},
                            ConsistencyLevel.ONE)
 
@@ -195,10 +195,12 @@ def delete_policy(policy_id):
                         {'policyId': policy_id},
                         ConsistencyLevel.ONE)
 
-    def remove_server_policies(_):
-        query = 'DELETE FROM serverpolicies WHERE "policyId"=:policyId;'
-        return _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
-    return d.addCallback(remove_server_policies)
+    # TODO: re-enable this. Cassandra's composite primary keys are a *real*
+    # head scratcher.
+    #def remove_server_policies(_):
+    #    query = 'DELETE FROM serverpolicies WHERE "policyId"=:policyId;'
+    #    return _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
+    return d
 
 
 _client = None
