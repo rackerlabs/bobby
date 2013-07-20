@@ -2,18 +2,10 @@
 import json
 
 from klein import Klein
-from silverberg.client import CQLClient
-from twisted.internet import endpoints, reactor
 
 from bobby import cass
 
 app = Klein()
-client = CQLClient(
-    endpoints.clientFromString(
-        reactor,
-        "tcp:{0}:{1}".format('localhost', 9160)),
-    'bobby')
-cass.set_client(client)
 
 
 @app.route('/<string:tenant_id>/groups', methods=['GET'])
