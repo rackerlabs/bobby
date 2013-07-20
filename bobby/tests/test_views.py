@@ -1,5 +1,6 @@
 """Tests for bobby.views."""
 import json
+import StringIO
 
 import mock
 from twisted.internet import defer
@@ -9,31 +10,20 @@ from twisted.web.test.requesthelper import DummyRequest
 from bobby import views
 
 
-class BobbyDummyContent(object):
-    """Dummy content object."""
-
-    def __init__(self, content=''):
-        self._content = content
-
-    def read(self):
-        """Fake read method, emulating StringIO."""
-        return self._content
-
-
 class BobbyDummyRequest(DummyRequest):
     """Dummy request object."""
 
     def __init__(self, postpath, session=None, content=''):
         super(BobbyDummyRequest, self).__init__(postpath, session)
-        self.content = BobbyDummyContent(content)
-
-        self._path = postpath
+        self.content = StringIO.StringIO()
+        self.content.write(content)
+        self.content.seek(0)
 
     def URLPath(self):
         """Fake URLPath object."""
-        path = mock.Mock(spec=['path'])
-        path.path = self._path
-        return path
+        FakeURLPath = mock.Mock(spec=['path'])
+        FakeURLPath.path = self.postpath
+        return FakeURLPath
 
 
 class TestGetGroups(unittest.TestCase):
