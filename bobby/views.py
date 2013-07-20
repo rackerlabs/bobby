@@ -231,8 +231,8 @@ def create_policy(request, tenant_id, group_id):
     :param str group_id: A group id
     """
     content = json.loads(request.content.read())
-    alarm_template_id = content.get('alarmTemplateId')
-    check_template_id = content.get('checkTemplateId')
+    alarm_template_id = content.get('alarmTemplate')
+    check_template_id = content.get('checkTemplate')
     policy_id = content.get('policyId')
 
     d = cass.create_policy(policy_id, group_id, alarm_template_id, check_template_id)
@@ -240,8 +240,8 @@ def create_policy(request, tenant_id, group_id):
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
         json_object = {
-            'alarmTemplateId': policy['alarmTemplateId'],
-            'checkTemplateId': policy['checkTemplateId'],
+            'alarmTemplate': policy['alarmTemplate'],
+            'checkTemplate': policy['checkTemplate'],
             'groupId': policy['groupId'],
             'links': [
                 {
@@ -271,8 +271,8 @@ def get_policy(request, tenant_id, group_id, policy_id):
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
         json_object = {
-            'alarmTemplateId': policy['alarmTemplateId'],
-            'checkTemplateId': policy['checkTemplateId'],
+            'alarmTemplate': policy['alarmTemplate'],
+            'checkTemplate': policy['checkTemplate'],
             'groupId': policy['groupId'],
             'links': [
                 {

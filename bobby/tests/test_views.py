@@ -291,8 +291,8 @@ class TestGetPolicies(unittest.TestCase):
         """Returns application/json of all policies owned by a group."""
         policies = [
             {
-                'alarmTemplateId': '{alarmTemplateId1}',
-                'checkTemplateId': '{checkTemplateId1}',
+                'alarmTemplate': '{alarmTemplate1}',
+                'checkTemplate': '{checkTemplate1}',
                 'groupId': '{groupId}',
                 'links': [
                     {
@@ -304,8 +304,8 @@ class TestGetPolicies(unittest.TestCase):
                 'policyId': '{policyId1}'
             },
             {
-                'alarmTemplateId': '{alarmTemplateId2}',
-                'checkTemplateId': '{checkTemplateId2}',
+                'alarmTemplate': '{alarmTemplate2}',
+                'checkTemplate': '{checkTemplate2}',
                 'groupId': '{groupId}',
                 'links': [
                     {
@@ -335,8 +335,8 @@ class TestCreatePolicy(unittest.TestCase):
     def test_create_server(self, create_policy):
         """POSTing application/json creates a policy."""
         expected = {
-            'alarmTemplateId': 'alarm-template-jkl',
-            'checkTemplateId': 'check-template-ghi',
+            'alarmTemplate': 'alarm-template-jkl',
+            'checkTemplate': 'check-template-ghi',
             'groupId': 'group-def',
             'links': [
                 {
@@ -352,8 +352,8 @@ class TestCreatePolicy(unittest.TestCase):
         create_policy.return_value = defer.succeed(policy)
 
         request_json = {
-            'alarmTemplateId': 'alarm-template-jkl',
-            'checkTemplateId': 'check-template-ghi',
+            'alarmTemplate': 'alarm-template-jkl',
+            'checkTemplate': 'check-template-ghi',
             'policyId': 'policy-abc'
         }
         request = BobbyDummyRequest('/101010/groups/group-def/policies/',
@@ -374,8 +374,8 @@ class TestGetPolicy(unittest.TestCase):
     def test_get_server(self, get_policy_by_policy_id):
         """Return application/json policy representation."""
         expected = {
-            'alarmTemplateId': 'alarm-template-jkl',
-            'checkTemplateId': 'check-template-ghi',
+            'alarmTemplate': 'alarm-template-jkl',
+            'checkTemplate': 'check-template-ghi',
             'groupId': 'group-def',
             'links': [
                 {

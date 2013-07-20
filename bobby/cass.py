@@ -168,18 +168,18 @@ def get_policy_by_policy_id(policy_id):
     return d.addCallback(return_policy)
 
 
-def create_policy(policy_id, group_id, alarm_template_id, check_template_id):
+def create_policy(policy_id, group_id, alarm_template, check_template):
     """Create and return a policy."""
     query = ' '.join((
-        'INSERT INTO policies ("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
-        'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);'
+        'INSERT INTO policies ("policyId", "groupId", "alarmTemplate", "checkTemplate")',
+        'VALUES (:policyId, :groupId, :alarmTemplate, :checkTemplate);'
     ))
 
     d = _client.execute(query,
                         {'policyId': policy_id,
                          'groupId': group_id,
-                         'alarmTemplateId': alarm_template_id,
-                         'checkTemplateId': check_template_id},
+                         'alarmTemplate': alarm_template,
+                         'checkTemplate': check_template},
                         ConsistencyLevel.ONE)
 
     def retrieve_policy(_):

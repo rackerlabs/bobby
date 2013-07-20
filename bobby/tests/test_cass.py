@@ -300,12 +300,12 @@ class TestGetPoliciesByGroupId(_DBTestCase):
         """Gets all policies from a provided group."""
         expected = [{'policyId': 'policy-abc',
                      'groupId': 'group-def',
-                     'alarmTemplateId': 'alarmTemplate-ghi',
-                     'checkTemplateId': 'checkTemplate-jkl'},
+                     'alarmTemplate': 'alarmTemplate-ghi',
+                     'checkTemplate': 'checkTemplate-jkl'},
                     {'policyId': 'policy-xyz',
                      'groupId': 'group-def',
-                     'alarmTemplateId': 'alarmTemplate-uvw',
-                     'checkTemplateId': 'checkTemplate-rst'}]
+                     'alarmTemplate': 'alarmTemplate-uvw',
+                     'checkTemplate': 'checkTemplate-rst'}]
         self.client.execute.return_value = defer.succeed(expected)
 
         d = cass.get_policies_by_group_id('group-def')
@@ -325,8 +325,8 @@ class TestGetPolicyByPolicyId(_DBTestCase):
         """Return a single policy dict, rather than a single item list."""
         expected = {'policyId': 'policy-abc',
                     'groupId': 'group-def',
-                    'alarmTemplateId': 'alarmTemplate-ghi',
-                    'checkTemplateId': 'checkTemplate-jkl'}
+                    'alarmTemplate': 'alarmTemplate-ghi',
+                    'checkTemplate': 'checkTemplate-jkl'}
         self.client.execute.return_value = defer.succeed([expected])
 
         d = cass.get_policy_by_policy_id('policy-abc')
@@ -364,8 +364,8 @@ class TestCreatePolicy(_DBTestCase):
         """Creates and returns a policy dict."""
         expected = {'policyId': 'policy-abc',
                     'groupId': 'group-def',
-                    'alarmTemplateId': 'alarmTemplate-ghi',
-                    'checkTemplateId': 'checkTemplate-jkl'}
+                    'alarmTemplate': 'alarmTemplate-ghi',
+                    'checkTemplate': 'checkTemplate-jkl'}
 
         def execute(query, data, consistency):
             if 'INSERT' in query:
@@ -375,8 +375,8 @@ class TestCreatePolicy(_DBTestCase):
         self.client.execute.side_effect = execute
 
         d = cass.create_policy(expected['policyId'], expected['groupId'],
-                               expected['alarmTemplateId'],
-                               expected['checkTemplateId'])
+                               expected['alarmTemplate'],
+                               expected['checkTemplate'])
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -385,10 +385,10 @@ class TestCreatePolicy(_DBTestCase):
             mock.call(
                 ' '.join([
                     'INSERT INTO policies',
-                    '("policyId", "groupId", "alarmTemplateId", "checkTemplateId")',
-                    'VALUES (:policyId, :groupId, :alarmTemplateId, :checkTemplateId);']),
-                {'alarmTemplateId': 'alarmTemplate-ghi',
-                 'checkTemplateId': 'checkTemplate-jkl',
+                    '("policyId", "groupId", "alarmTemplate", "checkTemplate")',
+                    'VALUES (:policyId, :groupId, :alarmTemplate, :checkTemplate);']),
+                {'alarmTemplate': 'alarmTemplate-ghi',
+                 'checkTemplate': 'checkTemplate-jkl',
                  'policyId': 'policy-abc',
                  'groupId': 'group-def'},
                 1),

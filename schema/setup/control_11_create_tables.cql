@@ -18,8 +18,8 @@ CREATE COLUMNFAMILY servers (
 CREATE COLUMNFAMILY policies (
     "groupId" ascii,
     "policyId" ascii, /* Provided by otter */
-    "alarmTemplateId" ascii, /* Provided by otter */
-    "checkTemplateId" ascii, /* Provided by otter */
+    "alarmTemplate" ascii, /* Provided by otter */
+    "checkTemplate" ascii, /* Provided by otter */
     PRIMARY KEY ("policyId", "groupId")
 );
 
