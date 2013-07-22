@@ -42,3 +42,6 @@ clean:
 	rm -rf schema/setup-*.cql
 	rm -rf schema/migrations-*.cql
 	rm -rf schema/teardown-*.cql
+
+coverage:
+	coverage run --source=${CODEDIR} --branch `which trial` ${CODEDIR} && coverage html -d _trial_coverage --omit="*/tests/*"

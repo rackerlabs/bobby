@@ -1,74 +1,290 @@
--- Group resources --
-List all groups.
-GET /groups
-> Accept: application/json
+--- Rackspace Autoscaling/Monitoring Bridge ---
+
+--
+Group Resource
+Groups representing Autoscaling groups correlating to a group of monitored
+servers. (/tenantId/groups)
+--
+List all the server groups for a given tenant ID.
+GET /{tenantId}/groups
 < 200
 < Content-Type: application/json
-[
-    {
-        webhook: "http://www.example.com/webhook",
-        groupId: "1"
-    }
-]
+{
+    "groups": [
+        {
+            "groupId": "{groupId1}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId1}",
+                    "rel": "self"
+                }
+            ],
+            "notification": "{notification1}",
+            "notificationPlan": "{notificationPlan1}",
+            "tenantId": "{tenantId}"
+        },
+        {
+            "groupId": "{groupId2}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId2}",
+                    "rel": "self"
+                }
+            ],
+            "notification": "{notification2}",
+            "notificationPlan": "{notificationPlan2}",
+            "tenantId": "{tenantId}"
+        }
+    ]
+}
 
-Create a new group
-PUT /groups/{groupId}
+
+Create a server group.
+POST /{tenantId}/groups
 > Accept: application/json
 {
-    webhook: "http://www.example.com/webhook"
+    "groupId": "{groupId1}",
+    "notification": "{notification}",
+    "notificationPlan": "{notificationPlan}"
 }
 < 201
 < Content-Type: application/json
 {
-    webhook: "http://www.example.com/webhook",
-    groupId: "{groupId}"
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
+            "rel": "self"
+        }
+    ],
+    "notification": "{notification2}",
+    "notificationPlan": "{notificationPlan2}",
+    "tenantId": "{tenantId}"
 }
 
-Delete a group
-DELETE /groups/{groupId}
+
+Get a scaling group.
+GET /{tenantId}/groups/{groupId}:
+< 200
+< Content-Type: application/json
+{
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
+            "rel": "self"
+        }
+    ],
+    "notification": "{notification2}",
+    "notificationPlan": "{notificationPlan2}",
+    "tenantId": "{tenantId}"
+}
+
+
+Delete a server group (should this cascade and delete the servers as well, or
+require the group be empty?).
+DELETE /{tenantId}/groups/{groupId}
 < 204
 < Content-Type: application/json
 
-Create a new server, and associate it with a group.
-PUT /groups/{groupId}/servers/{serverId}
+
+--
+Server Resource
+Servers are monitored in MaaS, and can receive alerts. They belong to scaling
+groups.
+--
+List all the servers for a given group ID.
+GET /{tenantId}/groups/{groupId}/servers
+< 200
+< Content-Type: application/json
+{
+    "servers": [
+        {
+            "entityId": "{entityId1}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId1}",
+                    "rel": "self"
+                }
+            ]
+            "serverId": "{serverId1}"
+        },
+        {
+            "entityId": "{entityId2}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId2}",
+                    "rel": "self"
+                }
+            ]
+            "serverId": "{serverId2}"
+        }
+    ]
+}
+
+
+Create a server group.
+POST /{tenantId}/groups/{groupId}/servers
 > Accept: application/json
+{
+    "entityId": "{entityId}",
+    "serverId": "{serverId}",
+    "serverPolicies: [
+        {
+            "policyId": "{policyId1}",
+            "alarmId": "{alarmId1}",
+            "checkId": "{checkId1}"
+        },
+        {
+            "policyId": "{policyId2}",
+            "alarmId": "{alarmId2}",
+            "checkId": "{checkId2}"
+        },
+        {
+            "policyId": "{policyId3}",
+            "alarmId": "{alarmId3}",
+            "checkId": "{checkId3}"
+        }
+    ]
+}
 < 201
 < Content-Type: application/json
 {
-    serverId: "{serverId}",
-    groupId: "{groupId}",
-    state: "OK"
+    "entityId": "{entityId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId}",
+            "rel": "self"
+        }
+    ],
+    "serverId": "{serverId}",
+    "serverPolicies: [
+        {
+            "policyId": "{policyId1}",
+            "alarmId": "{alarmId1}",
+            "checkId": "{checkId1}"
+        },
+        {
+            "policyId": "{policyId2}",
+            "alarmId": "{alarmId2}",
+            "checkId": "{checkId2}"
+        },
+        {
+            "policyId": "{policyId3}",
+            "alarmId": "{alarmId3}",
+            "checkId": "{checkId3}"
+        }
+    ]
 }
 
-Delete a server from within a group.
-DELETE /groups/{groupId}/servers/{serverId}
+
+Get a scaling group.
+GET /{tenantId}/groups/{groupId}/servers/{serverId}
+< 200
+< Content-Type: application/json
+{
+    "entityId": "{entityId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId}",
+            "rel": "self"
+        }
+    ],
+    "serverId": "{serverId}"
+}
+
+
+Delete a server group (should this cascade and delete the servers as well, or
+require the group be empty?).
+DELETE /{tenantId}/groups/{groupId}/servers/{serverId}
 < 204
 < Content-Type: application/json
 
-Transition state of a server from Ok to Critical and back.
-POST /groups/{groupId}/servers/{serverId}/webhook
+
+--
+Policy Resource
+Policies are references to autoscaling policies related to appropriate groups.
+--
+List all the policies for a given group ID.
+GET /{tenantId}/groups/{groupId}/policies
+< 200
+< Content-Type: application/json
+{
+    "policies": [
+        {
+            "alarmTemplateId": "{alarmTemplateId1}",
+            "checkTemplateId": "{checkTemplateId1}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId1}",
+                    "rel": "self"
+                }
+            ]
+            "policyId": "{policyId1}"
+        },
+        {
+            "alarmTemplateId": "{alarmTemplateId2}",
+            "checkTemplateId": "{checkTemplateId2}",
+            "groupId": "{groupId}",
+            "links": [
+                {
+                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId2}",
+                    "rel": "self"
+                }
+            ]
+            "policyId": "{policyId2}"
+        }
+    ]
+}
+
+
+Create a policy object.
+POST /{tenantId}/groups/{groupId}/policies
 > Accept: application/json
 {
-    state: "{state}"
+    "alarmTemplateId": "{alarmTemplateId}",
+    "checkTemplateId": "{checkTemplateId}",
+    "entityId": "{entityId}",
+    "policyId": "{serverId}"
 }
 < 201
 < Content-Type: application/json
 {
-    serverId: "{serverId}",
-    groupId: "{groupId}",
-    state: "{state}"
+    "alarmTemplateId": "{alarmTemplateId}",
+    "checkTemplateId": "{checkTemplateId}",
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId}",
+            "rel": "self"
+        }
+    ]
+    "policyId": "{policyId}"
 }
 
--- Server resources --
-List all servers
-GET /servers
-> Accept: application/json
+
+Get a policy.
+GET /{tenantId}/groups/{groupId}/policies/{policyId}
 < 200
 < Content-Type: application/json
-[
-    {
-        serverId: "2",
-        groupId: "10",
-        state: "OK"
-    }
-]
+{
+    "alarmTemplateId": "{alarmTemplateId}",
+    "checkTemplateId": "{checkTemplateId}",
+    "groupId": "{groupId}",
+    "links": [
+        {
+            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId}",
+            "rel": "self"
+        }
+    ]
+    "policyId": "{policyId}"
+}
+
+
+Delete a policy.
+DELETE /{tenantId}/groups/{groupId}/policies/{policyId}
+< 204
+< Content-Type: application/json

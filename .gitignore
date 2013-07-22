@@ -1,6 +1,8 @@
+.coverage
 *.pyc
 bobby.sqlite
 env
+_trial_coverage
 _trial_temp
 schema/setup-*.cql
 schema/teardown-*.cql

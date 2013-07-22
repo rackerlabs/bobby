@@ -15,15 +15,15 @@ CREATE COLUMNFAMILY servers (
     PRIMARY KEY("serverId", "groupId")
 );
 
-CREATE COLUMNFAMILY policy (
+CREATE COLUMNFAMILY policies (
     "groupId" ascii,
     "policyId" ascii, /* Provided by otter */
-    "alarmTemplateId" ascii, /* Provided by otter */
-    "checkTemplateId" ascii, /* Provided by otter */
-    PRIMARY KEY ("groupId", "policyId")
+    "alarmTemplate" ascii, /* Provided by otter */
+    "checkTemplate" ascii, /* Provided by otter */
+    PRIMARY KEY ("policyId", "groupId")
 );
 
-CREATE COLUMNFAMILY server_policy (
+CREATE COLUMNFAMILY serverpolicies (
     "serverId" ascii,
     "policyId" ascii,
     "alarmId" ascii,
