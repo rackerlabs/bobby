@@ -315,7 +315,7 @@ class TestGetPoliciesByGroupId(_DBTestCase):
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM policies WHERE "groupId"=:groupId ALLOW FILTERING;',
+            'SELECT * FROM policies WHERE "groupId"=:groupId;',
             {'groupId': 'group-def'},
             1)
 
@@ -331,20 +331,20 @@ class TestGetPolicyByPolicyId(_DBTestCase):
                     'checkTemplate': 'checkTemplate-jkl'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_policy_by_policy_id('policy-abc')
+        d = cass.get_policy_by_policy_id('101010', 'policy-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;',
-            {'policyId': 'policy-abc'},
+            'SELECT * FROM policies WHERE "policyId"=:policyId AND "groupId"=:groupId;',
+            {'policyId': 'policy-abc', 'groupId': '101010'},
             1)
 
     def test_get_policy_by_policy_id_not_found(self):
         """Raises an error if no policy is found."""
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_policy_by_policy_id('policy-abc')
+        d = cass.get_policy_by_policy_id('101010', 'policy-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ResultNotFoundError))
@@ -353,7 +353,7 @@ class TestGetPolicyByPolicyId(_DBTestCase):
         """Raises an error if more than one policy is found."""
         self.client.execute.return_value = defer.succeed(['policy-abc', 'policy-def'])
 
-        d = cass.get_policy_by_policy_id('policy-abc')
+        d = cass.get_policy_by_policy_id('101010', 'policy-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
@@ -395,8 +395,8 @@ class TestCreatePolicy(_DBTestCase):
                  'groupId': 'group-def'},
                 1),
             mock.call(
-                'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;',
-                {'policyId': 'policy-abc'},
+                'SELECT * FROM policies WHERE "policyId"=:policyId AND "groupId"=:groupId;',
+                {'policyId': 'policy-abc', 'groupId': 'group-def'},
                 1)
         ]
         self.assertEqual(self.client.execute.mock_calls, calls)

@@ -151,16 +151,16 @@ def get_serverpolicies_for_server(server_id):
 
 def get_policies_by_group_id(group_id):
     """Get all policies owned by a provided groupId."""
-    query = 'SELECT * FROM policies WHERE "groupId"=:groupId ALLOW FILTERING;'
+    query = 'SELECT * FROM policies WHERE "groupId"=:groupId;'
     return _client.execute(query, {'groupId': group_id},
                            ConsistencyLevel.ONE)
 
 
-def get_policy_by_policy_id(policy_id):
+def get_policy_by_policy_id(group_id, policy_id):
     """Get a single policy by its policyId."""
-    query = 'SELECT * FROM policies WHERE "policyId"=:policyId ALLOW FILTERING;'
+    query = 'SELECT * FROM policies WHERE "policyId"=:policyId AND "groupId"=:groupId;'
 
-    d = _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
+    d = _client.execute(query, {'policyId': policy_id, 'groupId': group_id}, ConsistencyLevel.ONE)
 
     def return_policy(result):
         if len(result) < 1:
@@ -186,7 +186,7 @@ def create_policy(policy_id, group_id, alarm_template, check_template):
                         ConsistencyLevel.ONE)
 
     def retrieve_policy(_):
-        return get_policy_by_policy_id(policy_id)
+        return get_policy_by_policy_id(group_id, policy_id)
     return d.addCallback(retrieve_policy)
 
 

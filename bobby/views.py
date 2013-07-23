@@ -266,7 +266,7 @@ def get_policy(request, tenant_id, group_id, policy_id):
     :param str group_id: A group id
     :param str policy_id: A policy id
     """
-    d = cass.get_policy_by_policy_id(policy_id)
+    d = cass.get_policy_by_policy_id(group_id, policy_id)
 
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
