@@ -22,11 +22,11 @@ class ResultNotFoundError(Exception):
 
 def get_groups_by_tenant_id(tenant_id):
     """Get all groups owned by a provided tenant."""
-    query = 'SELECT * FROM groups WHERE "tenantId"=:tenantId ALLOW FILTERING;'
+    query = 'SELECT * FROM groups WHERE "tenantId"=:tenantId;'
     return _client.execute(query, {'tenantId': tenant_id}, ConsistencyLevel.ONE)
 
 
-def get_group_by_id(group_id):
+def get_group_by_id(tenant_id, group_id):
     """Get a group by its id."""
     query = 'SELECT * FROM groups WHERE "groupId"=:groupId;'
     d = _client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
@@ -56,7 +56,7 @@ def create_group(group_id, tenant_id, notification, notification_plan):
     d = _client.execute(query, data, ConsistencyLevel.ONE)
 
     def retrieve_new_group(_):
-        return get_group_by_id(group_id)
+        return get_group_by_id(tenant_id, group_id)
     return d.addCallback(retrieve_new_group)
 
 

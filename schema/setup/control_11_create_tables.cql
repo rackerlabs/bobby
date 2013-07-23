@@ -5,14 +5,14 @@ CREATE COLUMNFAMILY groups (
     "tenantId" ascii,
     "notification" ascii,
     "notificationPlan" ascii,
-    PRIMARY KEY("groupId", "tenantId")
+    PRIMARY KEY("tenantId", "groupId")
     );
 
 CREATE COLUMNFAMILY servers (
     "serverId" ascii, /* Provided by nova */
     "groupId" ascii,
     "entityId" ascii, /* Provided by MaaS */
-    PRIMARY KEY("serverId", "groupId")
+    PRIMARY KEY("groupId", "serverId")
 );
 
 CREATE COLUMNFAMILY policies (
@@ -20,7 +20,7 @@ CREATE COLUMNFAMILY policies (
     "policyId" ascii, /* Provided by otter */
     "alarmTemplate" ascii, /* Provided by otter */
     "checkTemplate" ascii, /* Provided by otter */
-    PRIMARY KEY ("policyId", "groupId")
+    PRIMARY KEY ("groupId", "policyId")
 );
 
 CREATE COLUMNFAMILY serverpolicies (

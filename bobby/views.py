@@ -65,7 +65,7 @@ def get_group(request, tenant_id, group_id):
     :param str tenant_id: A tenant id
     :param str group_id: A group id.
     """
-    d = cass.get_group_by_id(group_id)
+    d = cass.get_group_by_id(tenant_id, group_id)
 
     def serialize_group(group):
         json_object = {

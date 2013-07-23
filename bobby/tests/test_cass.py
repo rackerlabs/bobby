@@ -31,7 +31,7 @@ class TestGetGroupsByTenantId(_DBTestCase):
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM groups WHERE "tenantId"=:tenantId ALLOW FILTERING;',
+            'SELECT * FROM groups WHERE "tenantId"=:tenantId;',
             {'tenantId': '101010'},
             1)
 
@@ -47,7 +47,7 @@ class TestGetGroupById(_DBTestCase):
                     'notificationPlan': 'notificationPlan-jkl'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_group_by_id('group-abc')
+        d = cass.get_group_by_id('101010', 'group-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -60,7 +60,7 @@ class TestGetGroupById(_DBTestCase):
         """Raises an error if no group is found."""
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_group_by_id('group-abc')
+        d = cass.get_group_by_id('101010', 'group-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ResultNotFoundError))
@@ -69,7 +69,7 @@ class TestGetGroupById(_DBTestCase):
         """Raises an error if more than one group is found."""
         self.client.execute.return_value = defer.succeed(['group1', 'group2'])
 
-        d = cass.get_group_by_id('group-abc')
+        d = cass.get_group_by_id('101010', 'group-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
