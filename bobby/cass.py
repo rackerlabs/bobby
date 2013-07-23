@@ -69,19 +69,20 @@ def delete_group(tenant_id, group_id):
                            ConsistencyLevel.ONE)
 
 
-def get_servers_by_group_id(group_id):
+def get_servers_by_group_id(tenant_id, group_id):
     """Get all servers with a specified groupId."""
-    query = 'SELECT * FROM servers WHERE "groupId"=:groupId ALLOW FILTERING;'
+    query = 'SELECT * FROM servers WHERE "groupId"=:groupId AND "tenantId"=:tenantId;'
 
-    return _client.execute(query, {'groupId': group_id}, ConsistencyLevel.ONE)
+    return _client.execute(query, {'groupId': group_id, 'tenantId': tenant_id},
+                           ConsistencyLevel.ONE)
 
 
-def get_server_by_server_id(server_id):
+def get_server_by_server_id(tenant_id, server_id):
     """Get a server by its serverId."""
 
-    query = 'SELECT * FROM servers WHERE "serverId"=:serverId;'
+    query = 'SELECT * FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;'
 
-    d = _client.execute(query, {'serverId': server_id},
+    d = _client.execute(query, {'serverId': server_id, 'tenantId': tenant_id},
                         ConsistencyLevel.ONE)
 
     def return_server(result):
@@ -93,14 +94,15 @@ def get_server_by_server_id(server_id):
     return d.addCallback(return_server)
 
 
-def create_server(server_id, entity_id, group_id, server_policies):
+def create_server(tenant_id, server_id, entity_id, group_id, server_policies):
     """Create and return a new server dict."""
     query = ' '.join([
-        'INSERT INTO servers ("serverId", "entityId", "groupId")',
-        'VALUES (:serverId, :entityId, :groupId);'])
+        'INSERT INTO servers ("tenantId", "serverId", "entityId", "groupId")',
+        'VALUES (:tenantId, :serverId, :entityId, :groupId);'])
 
     d = _client.execute(query,
-                        {'serverId': server_id, 'entityId': entity_id, 'groupId': group_id},
+                        {'serverId': server_id, 'entityId': entity_id, 'groupId': group_id,
+                         'tenantId': tenant_id},
                         ConsistencyLevel.ONE)
 
     def add_server_policies(_):
@@ -121,16 +123,16 @@ def create_server(server_id, entity_id, group_id, server_policies):
     d.addCallback(add_server_policies)
 
     def retrieve_server(_):
-        return get_server_by_server_id(server_id)
+        return get_server_by_server_id(tenant_id, server_id)
     return d.addCallback(retrieve_server)
 
 
-def delete_server(server_id):
+def delete_server(tenant_id, server_id):
     """Delete a server and cascade to deleting related serverpolicies."""
     # TODO: also delete the entity is MaaS
-    query = 'DELETE FROM servers WHERE "serverId"=:serverId;'
+    query = 'DELETE FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;'
     d = _client.execute(query,
-                        {'serverId': server_id},
+                        {'serverId': server_id, 'tenantId': tenant_id},
                         ConsistencyLevel.ONE)
 
     def remove_server_policies(_):

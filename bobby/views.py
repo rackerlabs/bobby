@@ -107,7 +107,7 @@ def get_servers(request, tenant_id, group_id):
     :param str tenant_id: A tenant id.
     :param str group_id: A group id.
     """
-    d = cass.get_servers_by_group_id(group_id)
+    d = cass.get_servers_by_group_id(tenant_id, group_id)
 
     def serialize(servers):
         result = {'servers': servers}
@@ -131,7 +131,7 @@ def create_server(request, tenant_id, group_id):
     entity_id = content.get('entityId')
     server_policies = content.get('serverPolicies')
 
-    d = cass.create_server(server_id, entity_id, group_id, server_policies)
+    d = cass.create_server(tenant_id, server_id, entity_id, group_id, server_policies)
 
     def serialize(server):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -167,7 +167,7 @@ def get_server(request, tenant_id, group_id, server_id):
     :param str group_id: A group id
     :param str server_id: A server id
     """
-    d = cass.get_server_by_server_id(server_id)
+    d = cass.get_server_by_server_id(tenant_id, server_id)
 
     def serialize(server):
         json_object = {
@@ -195,7 +195,7 @@ def delete_server(request, tenant_id, group_id, server_id):
     :param str group_id: A groud id
     :param str server_id: A server id
     """
-    d = cass.delete_server(server_id)
+    d = cass.delete_server(tenant_id, server_id)
 
     def finish(_):
         request.setHeader('Content-Type', 'application/json')

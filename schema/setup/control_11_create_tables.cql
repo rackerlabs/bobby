@@ -9,11 +9,14 @@ CREATE COLUMNFAMILY groups (
     );
 
 CREATE COLUMNFAMILY servers (
+    "tenantId" ascii,
     "serverId" ascii, /* Provided by nova */
     "groupId" ascii,
     "entityId" ascii, /* Provided by MaaS */
-    PRIMARY KEY("groupId", "serverId")
+    PRIMARY KEY("tenantId", "serverId")
 );
+
+CREATE INDEX servers_by_groupId ON servers ("groupId");
 
 CREATE COLUMNFAMILY policies (
     "groupId" ascii,

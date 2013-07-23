@@ -280,7 +280,7 @@ class TestDeleteServer(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_server.assert_called_once_with('opqrst')
+        delete_server.assert_called_once_with('101010', 'opqrst')
 
 
 class TestGetPolicies(unittest.TestCase):
