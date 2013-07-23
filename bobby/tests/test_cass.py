@@ -121,12 +121,12 @@ class TestDeleteGroup(_DBTestCase):
         """Deletes a group."""
         self.client.execute.return_value = defer.succeed(None)
 
-        d = cass.delete_group('group-abc')
+        d = cass.delete_group('101010', 'group-abc')
 
         self.successResultOf(d)
         self.client.execute.assert_called_once_with(
-            'DELETE FROM groups WHERE "groupId"=:groupId;',
-            {'groupId': 'group-abc'},
+            'DELETE FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;',
+            {'groupId': 'group-abc', 'tenantId': '101010'},
             1)
 
 

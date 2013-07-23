@@ -91,7 +91,7 @@ def delete_group(request, tenant_id, group_id):
     :param str tenant_id: A tenant id
     :param str group_id: A groud id
     """
-    d = cass.delete_group(group_id)
+    d = cass.delete_group(tenant_id, group_id)
 
     def finish(_):
         request.setHeader('Content-Type', 'application/json')

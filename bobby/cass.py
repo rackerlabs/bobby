@@ -60,11 +60,12 @@ def create_group(group_id, tenant_id, notification, notification_plan):
     return d.addCallback(retrieve_new_group)
 
 
-def delete_group(group_id):
+def delete_group(tenant_id, group_id):
     """Delete a group."""
-    query = 'DELETE FROM groups WHERE "groupId"=:groupId;'
+    query = 'DELETE FROM groups WHERE "groupId"=:groupId AND "tenantId"=:tenantId;'
     return _client.execute(query,
-                           {'groupId': group_id},
+                           {'groupId': group_id,
+                           'tenantId': tenant_id},
                            ConsistencyLevel.ONE)
 
 

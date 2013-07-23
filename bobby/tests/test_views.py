@@ -148,7 +148,7 @@ class TestDeleteGroup(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_group.assert_called_once_with('uvwxyz')
+        delete_group.assert_called_once_with('101010', 'uvwxyz')
 
 
 class TestGetServers(unittest.TestCase):
