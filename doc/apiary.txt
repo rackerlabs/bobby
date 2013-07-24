@@ -130,24 +130,7 @@ POST /{tenantId}/groups/{groupId}/servers
 > Accept: application/json
 {
     "entityId": "{entityId}",
-    "serverId": "{serverId}",
-    "serverPolicies: [
-        {
-            "policyId": "{policyId1}",
-            "alarmId": "{alarmId1}",
-            "checkId": "{checkId1}"
-        },
-        {
-            "policyId": "{policyId2}",
-            "alarmId": "{alarmId2}",
-            "checkId": "{checkId2}"
-        },
-        {
-            "policyId": "{policyId3}",
-            "alarmId": "{alarmId3}",
-            "checkId": "{checkId3}"
-        }
-    ]
+    "serverId": "{serverId}"
 }
 < 201
 < Content-Type: application/json
@@ -159,24 +142,7 @@ POST /{tenantId}/groups/{groupId}/servers
             "rel": "self"
         }
     ],
-    "serverId": "{serverId}",
-    "serverPolicies: [
-        {
-            "policyId": "{policyId1}",
-            "alarmId": "{alarmId1}",
-            "checkId": "{checkId1}"
-        },
-        {
-            "policyId": "{policyId2}",
-            "alarmId": "{alarmId2}",
-            "checkId": "{checkId2}"
-        },
-        {
-            "policyId": "{policyId3}",
-            "alarmId": "{alarmId3}",
-            "checkId": "{checkId3}"
-        }
-    ]
+    "serverId": "{serverId}"
 }
 
 
