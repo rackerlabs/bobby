@@ -105,23 +105,6 @@ def create_server(tenant_id, server_id, entity_id, group_id, server_policies):
                          'tenantId': tenant_id},
                         ConsistencyLevel.ONE)
 
-    def add_server_policies(_):
-        query = ' '.join([
-            'INSERT INTO serverpolicies ("serverId", "policyId",',
-            '"alarmId", "checkId", "state") VALUES (:serverId, :policyId,',
-            ':alarmId, :checkId, :state);'])
-        deferreds = []
-        for server_policy in server_policies:
-            d = _client.execute(query, {'serverId': server_id,
-                                        'policyId': server_policy['policyId'],
-                                        'alarmId': server_policy['alarmId'],
-                                        'checkId': server_policy['checkId'],
-                                        'state': 'OK'},
-                                ConsistencyLevel.ONE)
-            deferreds.append(d)
-        return defer.DeferredList(deferreds)
-    d.addCallback(add_server_policies)
-
     def retrieve_server(_):
         return get_server_by_server_id(tenant_id, server_id)
     return d.addCallback(retrieve_server)
@@ -135,18 +118,12 @@ def delete_server(tenant_id, server_id):
                         {'serverId': server_id, 'tenantId': tenant_id},
                         ConsistencyLevel.ONE)
 
-    def remove_server_policies(_):
-        query = 'DELETE FROM serverpolicies WHERE "serverId"=:serverId;'
-        return _client.execute(query, {'serverId': server_id}, ConsistencyLevel.ONE)
-    return d.addCallback(remove_server_policies)
+    #def remove_server_policies(_):
+        #query = 'DELETE FROM serverpolicies WHERE "serverId"=:serverId;'
+        #return _client.execute(query, {'serverId': server_id}, ConsistencyLevel.ONE)
+    #return d.addCallback(remove_server_policies)
 
-
-def get_serverpolicies_for_server(server_id):
-    """Get all server policies for a provided server_id."""
-    query = 'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;'
-    return _client.execute(query,
-                           {'serverId': server_id},
-                           ConsistencyLevel.ONE)
+    return d
 
 
 def get_policies_by_group_id(group_id):

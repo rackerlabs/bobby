@@ -147,15 +147,11 @@ def create_server(request, tenant_id, group_id):
             'serverId': server['serverId']
         }
 
-        d = cass.get_serverpolicies_for_server(server['serverId'])
+        request.setHeader('Content-Type', 'application/json')
+        request.setResponseCode(201)
+        request.write(json.dumps(json_object))
+        request.finish()
 
-        def add_policies_and_finish(policies):
-            json_object['serverPolicies'] = policies
-            request.setHeader('Content-Type', 'application/json')
-            request.setResponseCode(201)
-            request.write(json.dumps(json_object))
-            request.finish()
-        return d.addCallback(add_policies_and_finish)
     return d.addCallback(serialize)
 
 

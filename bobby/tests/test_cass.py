@@ -229,17 +229,6 @@ class TestCreateServer(_DBTestCase):
                  'tenantId':  '101010'},
                 1),
             mock.call(
-                ' '.join([
-                    'INSERT INTO serverpolicies',
-                    '("serverId", "policyId", "alarmId", "checkId", "state")',
-                    'VALUES (:serverId, :policyId, :alarmId, :checkId, :state);']),
-                {'serverId': expected_policy['serverId'],
-                 'policyId': expected_policy['policyId'],
-                 'alarmId': expected_policy['alarmId'],
-                 'checkId': expected_policy['checkId'],
-                 'state': 'OK'},
-                1),
-            mock.call(
                 'SELECT * FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;',
                 {'serverId': 'server-abc', 'tenantId':  '101010'},
                 1)]
@@ -262,37 +251,9 @@ class TestDeleteServer(_DBTestCase):
         calls = [
             mock.call(
                 'DELETE FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;',
-                {'serverId': 'server-abc', 'tenantId': '101010'}, 1),
-            mock.call(
-                'DELETE FROM serverpolicies WHERE "serverId"=:serverId;',
-                {'serverId': 'server-abc'}, 1),
+                {'serverId': 'server-abc', 'tenantId': '101010'}, 1)
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)
-
-
-class TestGetServerPoliciesForServer(_DBTestCase):
-    """Test bobby.cass.get_serverpolicies_for_server."""
-
-    def test_get_serverpolicies_for_server(self):
-        """Returns a list of serverpolicies for a server."""
-        expected = [{'serverId': 'server-abc',
-                     'policyId': 'policy-def',
-                     'alarmId': 'alarm-ghi',
-                     'checkId': 'check-jkl'},
-                    {'serverId': 'server-abc',
-                     'policyId': 'policy-xyz]',
-                     'alarmId': 'alarm-uvw',
-                     'checkId': 'check-rst'}]
-        self.client.execute.return_value = defer.succeed(expected)
-
-        d = cass.get_serverpolicies_for_server('server-abc')
-
-        result = self.successResultOf(d)
-        self.assertEqual(result, expected)
-        self.client.execute.assert_called_once_with(
-            'SELECT * FROM serverpolicies WHERE "serverId"=:serverId;',
-            {'serverId': 'server-abc'},
-            1)
 
 
 class TestGetPoliciesByGroupId(_DBTestCase):

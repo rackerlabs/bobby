@@ -32,5 +32,5 @@ CREATE COLUMNFAMILY serverpolicies (
     "alarmId" ascii,
     "checkId" ascii,
     "state" ascii,
-    PRIMARY KEY("serverId", "policyId")
+    PRIMARY KEY("policyId", "serverId")
 );
