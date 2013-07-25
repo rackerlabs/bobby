@@ -231,11 +231,13 @@ def alter_alarm_state(alarm_id, state):
             return defer.fail(ExcessiveResultsError('alarm', alarm_id))
         query = ('UPDATE serverpolicies SET state=:state WHERE "policyId"=:policyId '
                  'AND "serverId"=:serverId;')
-        return _client.execute(query,
-                               {'state': state,
-                                'policyId': result[0]['policyId'],
-                                'serverId': result[0]['serverId']},
-                               ConsistencyLevel.ONE)
+        d2 = _client.execute(query,
+                             {'state': state,
+                              'policyId': result[0]['policyId'],
+                              'serverId': result[0]['serverId']},
+                             ConsistencyLevel.ONE)
+        d2.addCallback(lambda _: (result[0]['policyId'], result[0]['serverId']))
+        return d2
 
     d.addCallback(do_alteration)
 

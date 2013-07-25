@@ -457,7 +457,7 @@ class TestAlterAlarmState(_DBTestCase):
                     'state': True}
 
         def execute(query, data, consistency):
-            if 'INSERT' in query:
+            if 'UPDATE' in query:
                 return defer.succeed(None)
             elif 'SELECT' in query:
                 return defer.succeed([expected])
@@ -466,7 +466,7 @@ class TestAlterAlarmState(_DBTestCase):
         d = cass.alter_alarm_state(expected['alarmId'], False)
         result = self.successResultOf(d)
 
-        self.assertEqual(result, None)
+        self.assertEqual(result, ('policy-abc', 'server-def'))
 
         calls = [
             mock.call(
