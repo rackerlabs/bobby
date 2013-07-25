@@ -5,22 +5,25 @@ CREATE COLUMNFAMILY groups (
     "tenantId" ascii,
     "notification" ascii,
     "notificationPlan" ascii,
-    PRIMARY KEY("groupId", "tenantId")
+    PRIMARY KEY("tenantId", "groupId")
     );
 
 CREATE COLUMNFAMILY servers (
+    "tenantId" ascii,
     "serverId" ascii, /* Provided by nova */
     "groupId" ascii,
     "entityId" ascii, /* Provided by MaaS */
-    PRIMARY KEY("serverId", "groupId")
+    PRIMARY KEY("tenantId", "serverId")
 );
+
+CREATE INDEX servers_by_groupId ON servers ("groupId");
 
 CREATE COLUMNFAMILY policies (
     "groupId" ascii,
     "policyId" ascii, /* Provided by otter */
     "alarmTemplate" ascii, /* Provided by otter */
     "checkTemplate" ascii, /* Provided by otter */
-    PRIMARY KEY ("policyId", "groupId")
+    PRIMARY KEY ("groupId", "policyId")
 );
 
 CREATE COLUMNFAMILY serverpolicies (
@@ -29,5 +32,7 @@ CREATE COLUMNFAMILY serverpolicies (
     "alarmId" ascii,
     "checkId" ascii,
     "state" ascii,
-    PRIMARY KEY("serverId", "policyId")
+    PRIMARY KEY("policyId", "serverId")
 );
+
+CREATE INDEX serverpolicies_by_alarmId ON serverpolicies ("alarmId");

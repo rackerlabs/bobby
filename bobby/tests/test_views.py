@@ -148,7 +148,7 @@ class TestDeleteGroup(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_group.assert_called_once_with('uvwxyz')
+        delete_group.assert_called_once_with('101010', 'uvwxyz')
 
 
 class TestGetServers(unittest.TestCase):
@@ -191,9 +191,8 @@ class TestGetServers(unittest.TestCase):
 class TestCreateServer(unittest.TestCase):
     """Test POST /{tenantId}/groups"""
 
-    @mock.patch('bobby.cass.get_serverpolicies_for_server')
     @mock.patch('bobby.cass.create_server')
-    def test_create_server(self, create_server, get_serverpolicies_for_server):
+    def test_create_server(self, create_server):
         """POSTing application/json creates a server."""
         expected = {
             'entityId': 'entity-xyz',
@@ -205,18 +204,10 @@ class TestCreateServer(unittest.TestCase):
                 }
             ],
             'serverId': 'server-rst',
-            'serverPolicies': [
-                {'policyId': 'policy-xyz',
-                 'alarmId': 'alarm-rst',
-                 'checkId': 'check-uvw'}
-            ]
         }
         server = expected.copy()
         del server['links']
-        del server['serverPolicies']
-        serverpolicies = expected['serverPolicies']
         create_server.return_value = defer.succeed(server)
-        get_serverpolicies_for_server.return_value = defer.succeed(serverpolicies)
 
         request_json = {
             'entityId': 'entity-xyz',
@@ -280,7 +271,7 @@ class TestDeleteServer(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_server.assert_called_once_with('opqrst')
+        delete_server.assert_called_once_with('101010', 'opqrst')
 
 
 class TestGetPolicies(unittest.TestCase):

@@ -65,7 +65,7 @@ def get_group(request, tenant_id, group_id):
     :param str tenant_id: A tenant id
     :param str group_id: A group id.
     """
-    d = cass.get_group_by_id(group_id)
+    d = cass.get_group_by_id(tenant_id, group_id)
 
     def serialize_group(group):
         json_object = {
@@ -91,7 +91,7 @@ def delete_group(request, tenant_id, group_id):
     :param str tenant_id: A tenant id
     :param str group_id: A groud id
     """
-    d = cass.delete_group(group_id)
+    d = cass.delete_group(tenant_id, group_id)
 
     def finish(_):
         request.setHeader('Content-Type', 'application/json')
@@ -107,7 +107,7 @@ def get_servers(request, tenant_id, group_id):
     :param str tenant_id: A tenant id.
     :param str group_id: A group id.
     """
-    d = cass.get_servers_by_group_id(group_id)
+    d = cass.get_servers_by_group_id(tenant_id, group_id)
 
     def serialize(servers):
         result = {'servers': servers}
@@ -129,9 +129,10 @@ def create_server(request, tenant_id, group_id):
     content = json.loads(request.content.read())
     server_id = content.get('serverId')
     entity_id = content.get('entityId')
-    server_policies = content.get('serverPolicies')
 
-    d = cass.create_server(server_id, entity_id, group_id, server_policies)
+    d = cass.create_server(tenant_id, server_id, entity_id, group_id)
+
+    # Trigger actions to actually create the server's monitoring here
 
     def serialize(server):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -147,15 +148,11 @@ def create_server(request, tenant_id, group_id):
             'serverId': server['serverId']
         }
 
-        d = cass.get_serverpolicies_for_server(server['serverId'])
+        request.setHeader('Content-Type', 'application/json')
+        request.setResponseCode(201)
+        request.write(json.dumps(json_object))
+        request.finish()
 
-        def add_policies_and_finish(policies):
-            json_object['serverPolicies'] = policies
-            request.setHeader('Content-Type', 'application/json')
-            request.setResponseCode(201)
-            request.write(json.dumps(json_object))
-            request.finish()
-        return d.addCallback(add_policies_and_finish)
     return d.addCallback(serialize)
 
 
@@ -167,7 +164,7 @@ def get_server(request, tenant_id, group_id, server_id):
     :param str group_id: A group id
     :param str server_id: A server id
     """
-    d = cass.get_server_by_server_id(server_id)
+    d = cass.get_server_by_server_id(tenant_id, server_id)
 
     def serialize(server):
         json_object = {
@@ -195,7 +192,10 @@ def delete_server(request, tenant_id, group_id, server_id):
     :param str group_id: A groud id
     :param str server_id: A server id
     """
-    d = cass.delete_server(server_id)
+    d = cass.delete_server(tenant_id, server_id)
+
+    # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
+    # here...
 
     def finish(_):
         request.setHeader('Content-Type', 'application/json')
@@ -237,6 +237,8 @@ def create_policy(request, tenant_id, group_id):
 
     d = cass.create_policy(policy_id, group_id, alarm_template_id, check_template_id)
 
+    # Trigger actions to create the alarm and checks on the MaaS side and set things up
+
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
         json_object = {
@@ -266,7 +268,7 @@ def get_policy(request, tenant_id, group_id, policy_id):
     :param str group_id: A group id
     :param str policy_id: A policy id
     """
-    d = cass.get_policy_by_policy_id(policy_id)
+    d = cass.get_policy_by_policy_id(group_id, policy_id)
 
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -298,6 +300,9 @@ def delete_policy(request, tenant_id, group_id, policy_id):
     :param str policy_id: A policy id
     """
     d = cass.delete_policy(policy_id)
+
+    # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
+    # here...
 
     def finish(_):
         request.setHeader('Content-Type', 'application/json')
