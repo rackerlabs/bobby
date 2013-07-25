@@ -200,10 +200,6 @@ class TestCreateServer(_DBTestCase):
                     'groupId': 'group-def',
                     'entityId': 'entity-ghi',
                     'tenantId': '101010'}
-        expected_policy = {'serverId': 'server-abc',
-                           'policyId': 'policy-def',
-                           'alarmId': 'alarm-ghi',
-                           'checkId': 'check-jkl'}
 
         def execute(query, data, consistency):
             if 'INSERT' in query:
@@ -213,7 +209,7 @@ class TestCreateServer(_DBTestCase):
         self.client.execute.side_effect = execute
 
         d = cass.create_server(expected['tenantId'], expected['serverId'], expected['entityId'],
-                               expected['groupId'], [expected_policy])
+                               expected['groupId'])
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -367,7 +363,7 @@ class TestDeletePolicy(_DBTestCase):
     """Test bobby.cass.delete_policy."""
 
     def test_delete_policy(self):
-        """Deletes a policy and cascades to associated serverpolicies."""
+        """Deletes a policy."""
         def execute(*args, **kwargs):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
@@ -376,14 +372,74 @@ class TestDeletePolicy(_DBTestCase):
 
         self.successResultOf(d)
 
-        # TODO: re-enable this. See implementation for why it's currently
-        # disabled.
         calls = [
             mock.call(
                 'DELETE FROM policies WHERE "policyId"=:policyId;',
                 {'policyId': 'policy-abc'}, 1),
-            #mock.call(
-            #    'DELETE FROM serverpolicies WHERE "policyId"=:policyId;',
-            #    {'policyId': 'policy-abc'}, 1),
+        ]
+        self.assertEqual(calls, self.client.execute.mock_calls)
+
+
+class TestServerPoliciesCreateDestroy(_DBTestCase):
+    """Test bobby.cass.register_policy_on_server and bobby.cass.deregister_policy_on_server."""
+
+    def test_register_policy_on_server(self):
+        """Registers a policy on a server and creates a serverpolicy record."""
+        def execute(*args, **kwargs):
+            return defer.succeed(None)
+        self.client.execute.side_effect = execute
+
+        d = cass.register_policy_on_server('policy-abc', 'server-abc', 'alABCD', 'chABCD')
+
+        self.successResultOf(d)
+
+        calls = [
+            mock.call(
+                ('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", state)'
+                 ' VALUES (:serverId, :policyId, :alarmId, :checkId, false);'),
+                {'policyId': 'policy-abc', 'serverId': 'server-abc',
+                 'alarmId': 'alABCD', 'checkId': 'chABCD'}, 1),
+        ]
+        self.assertEqual(calls, self.client.execute.mock_calls)
+
+    def test_deregister_policy_on_server(self):
+        """Registers a policy on a server and creates a serverpolicy record."""
+        def execute(*args, **kwargs):
+            return defer.succeed(None)
+        self.client.execute.side_effect = execute
+
+        d = cass.deregister_policy_on_server('policy-abc', 'server-abc')
+
+        self.successResultOf(d)
+
+        calls = [
+            mock.call(
+                'DELETE FROM serverpolicies WHERE "policyId"=:policyId AND "serverId"=:serverId;',
+                {'policyId': 'policy-abc', 'serverId': 'server-abc'}, 1),
+        ]
+        self.assertEqual(calls, self.client.execute.mock_calls)
+
+
+class TestServerPolicies(_DBTestCase):
+    """Test bobby.cass.register_policy_on_server and bobby.cass.deregister_policy_on_server."""
+
+    def test_policy_state(self):
+        """Registers a policy on a server and creates a serverpolicy record."""
+        expected = [{'policyId': 'policy-abc',
+                    'groupId': 'group-def',
+                    'alarmId': 'alABCD',
+                    'checkId': 'chABCD',
+                    'state': 'false'}]
+        self.client.execute.return_value = defer.succeed(expected)
+
+        d = cass.get_policy_state('policy-abc')
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+
+        calls = [
+            mock.call(
+                'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;',
+                {'policyId': 'policy-abc'}, 1),
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)

@@ -34,3 +34,5 @@ CREATE COLUMNFAMILY serverpolicies (
     "state" ascii,
     PRIMARY KEY("policyId", "serverId")
 );
+
+CREATE INDEX serverpolicies_by_alarmId ON serverpolicies ("alarmId");

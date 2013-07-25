@@ -94,7 +94,7 @@ def get_server_by_server_id(tenant_id, server_id):
     return d.addCallback(return_server)
 
 
-def create_server(tenant_id, server_id, entity_id, group_id, server_policies):
+def create_server(tenant_id, server_id, entity_id, group_id):
     """Create and return a new server dict."""
     query = ' '.join([
         'INSERT INTO servers ("tenantId", "serverId", "entityId", "groupId")',
@@ -117,11 +117,6 @@ def delete_server(tenant_id, server_id):
     d = _client.execute(query,
                         {'serverId': server_id, 'tenantId': tenant_id},
                         ConsistencyLevel.ONE)
-
-    #def remove_server_policies(_):
-        #query = 'DELETE FROM serverpolicies WHERE "serverId"=:serverId;'
-        #return _client.execute(query, {'serverId': server_id}, ConsistencyLevel.ONE)
-    #return d.addCallback(remove_server_policies)
 
     return d
 
@@ -175,12 +170,42 @@ def delete_policy(policy_id):
                         {'policyId': policy_id},
                         ConsistencyLevel.ONE)
 
-    # TODO: re-enable this. Cassandra's composite primary keys are a *real*
-    # head scratcher.
-    #def remove_server_policies(_):
-    #    query = 'DELETE FROM serverpolicies WHERE "policyId"=:policyId;'
-    #    return _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
     return d
+
+
+def register_policy_on_server(policy_id, server_id, alarm_id, check_id):
+    """Create a serverpolicy."""
+    query = ' '.join((
+        'INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", state)',
+        'VALUES (:serverId, :policyId, :alarmId, :checkId, false);'
+    ))
+
+    d = _client.execute(query,
+                        {'policyId': policy_id,
+                         'serverId': server_id,
+                         'alarmId': alarm_id,
+                         'checkId': check_id},
+                        ConsistencyLevel.ONE)
+    return d
+
+
+def deregister_policy_on_server(policy_id, server_id):
+    """Delete a serverpolicy record."""
+    query = 'DELETE FROM serverpolicies WHERE "policyId"=:policyId AND "serverId"=:serverId;'
+
+    d = _client.execute(query,
+                        {'policyId': policy_id,
+                         'serverId': server_id},
+                        ConsistencyLevel.ONE)
+
+    return d
+
+
+def get_policy_state(policy_id):
+    """ Get the state of the policy checks on each server. """
+    query = 'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;'
+    return _client.execute(query, {'policyId': policy_id},
+                           ConsistencyLevel.ONE)
 
 
 _client = None

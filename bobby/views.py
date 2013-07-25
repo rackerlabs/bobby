@@ -129,9 +129,10 @@ def create_server(request, tenant_id, group_id):
     content = json.loads(request.content.read())
     server_id = content.get('serverId')
     entity_id = content.get('entityId')
-    server_policies = content.get('serverPolicies')
 
-    d = cass.create_server(tenant_id, server_id, entity_id, group_id, server_policies)
+    d = cass.create_server(tenant_id, server_id, entity_id, group_id)
+
+    # Trigger actions to actually create the server's monitoring here
 
     def serialize(server):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -193,6 +194,9 @@ def delete_server(request, tenant_id, group_id, server_id):
     """
     d = cass.delete_server(tenant_id, server_id)
 
+    # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
+    # here...
+
     def finish(_):
         request.setHeader('Content-Type', 'application/json')
         request.setResponseCode(204)
@@ -232,6 +236,8 @@ def create_policy(request, tenant_id, group_id):
     policy_id = content.get('policyId')
 
     d = cass.create_policy(policy_id, group_id, alarm_template_id, check_template_id)
+
+    # Trigger actions to create the alarm and checks on the MaaS side and set things up
 
     def serialize(policy):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -294,6 +300,9 @@ def delete_policy(request, tenant_id, group_id, policy_id):
     :param str policy_id: A policy id
     """
     d = cass.delete_policy(policy_id)
+
+    # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
+    # here...
 
     def finish(_):
         request.setHeader('Content-Type', 'application/json')
