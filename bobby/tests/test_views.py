@@ -403,3 +403,24 @@ class TestDeletePolicy(unittest.TestCase):
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         delete_policy.assert_called_once_with('opqrst')
+
+
+class TestAlarm(unittest.TestCase):
+    """Test MaaS alarm endpoint."""
+
+    @mock.patch('bobby.cass.alter_alarm_state')
+    def test_alarm(self, alter_alarm_state):
+        """Updates the status of an alarm for a server."""
+        alter_alarm_state.return_value = defer.succeed(None)
+
+        data = {
+            'alarmId': 'alarm-abcdef',
+            'status': 'CRITICAL'
+        }
+        request = BobbyDummyRequest('/alarm', content=json.dumps(data))
+        request.method = 'POST'
+        d = views.alarm(request)
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 200)
+        alter_alarm_state.assert_called_once_with(data['alarmId'], data['status'])
