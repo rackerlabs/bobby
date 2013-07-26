@@ -482,3 +482,82 @@ class TestAlterAlarmState(_DBTestCase):
                 1)
         ]
         self.assertEqual(self.client.execute.mock_calls, calls)
+
+
+class TestCheckQuorumHealth(_DBTestCase):
+    """Test bobby.cass.check_quorum_health."""
+
+    def test_no_serverpolicy(self):
+        """Raises an error if no serverpolicy is found."""
+        def execute(query, data, consistency):
+            return defer.succeed([])
+        self.client.execute.side_effect = execute
+
+        d = cass.check_quorum_health('alarm-abcdef')
+
+        result = self.failureResultOf(d)
+        self.assertTrue(result.check(cass.ResultNotFoundError))
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;',
+            {'alarmId': 'alarm-abcdef'}, 1)
+
+    def test_too_many_serverpolicies(self):
+        """Raises an error if more than one serverpolicy is returned."""
+        def execute(query, data, consistency):
+            return defer.succeed([1, 2, 3])
+        self.client.execute.side_effect = execute
+
+        d = cass.check_quorum_health('alarm-abcdef')
+
+        result = self.failureResultOf(d)
+        self.assertTrue(result.check(cass.ExcessiveResultsError))
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;',
+            {'alarmId': 'alarm-abcdef'}, 1)
+
+    def test_unhealthy(self):
+        """Results in a False when the quorum is unhealthy."""
+        def execute(query, data, consistency):
+            if 'alarmId' in data.keys():
+                return defer.succeed([{'policyId': 'policy-uvwxyz'}])
+            elif 'state' in data.keys():
+                return defer.succeed(4)
+            elif 'policyId' in data.keys():
+                return defer.succeed(8)
+
+        self.client.execute.side_effect = execute
+
+        d = cass.check_quorum_health('alarm-abcdef')
+
+        result = self.successResultOf(d)
+        self.assertFalse(result)
+
+    def test_healthy(self):
+        """Results in a False when the quorum is healthy."""
+        def execute(query, data, consistency):
+            if 'alarmId' in data.keys():
+                return defer.succeed([{'policyId': 'policy-uvwxyz'}])
+            elif 'state' in data.keys():
+                return defer.succeed(3)
+            elif 'policyId' in data.keys():
+                return defer.succeed(8)
+
+        self.client.execute.side_effect = execute
+
+        d = cass.check_quorum_health('alarm-abcdef')
+
+        result = self.successResultOf(d)
+        self.assertTrue(result)
+
+        calls = [
+            mock.call(
+                'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;',
+                {'alarmId': 'alarm-abcdef'}, 1),
+            mock.call(
+                'SELECT COUNT(*) FROM serverpolicies WHERE "policyId"=:policyId;',
+                {'policyId': 'policy-uvwxyz'}, 1),
+            mock.call(
+                'SELECT COUNT(*) FROM serverpolicies WHERE "policyId"=:policyId AND "state"=:state;',
+                {'state': 'CRITICAL', 'policyId': 'policy-uvwxyz'}, 1)
+        ]
+        self.assertEqual(self.client.execute.mock_calls, calls)
