@@ -208,6 +208,42 @@ def get_policy_state(policy_id):
                            ConsistencyLevel.ONE)
 
 
+def alter_alarm_state(alarm_id, state):
+    """
+    Get the alarm locator and alter the state for that alarm.
+
+    This is slightly more complex than it needs to be because you can't do an UPDATE
+    based on an index.... so we have to look up the serverpolicies record from
+    the alarmId and then alter it.
+
+    Remember: CQL looks like SQL but it isn't.  There is no query planner.
+    """
+    query = 'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;'
+
+    d = _client.execute(query,
+                        {'alarmId': alarm_id},
+                        ConsistencyLevel.ONE)
+
+    def do_alteration(result):
+        if len(result) < 1:
+            return defer.fail(ResultNotFoundError('alarm', alarm_id))
+        if len(result) > 1:
+            return defer.fail(ExcessiveResultsError('alarm', alarm_id))
+        query = ('UPDATE serverpolicies SET state=:state WHERE "policyId"=:policyId '
+                 'AND "serverId"=:serverId;')
+        d2 = _client.execute(query,
+                             {'state': state,
+                              'policyId': result[0]['policyId'],
+                              'serverId': result[0]['serverId']},
+                             ConsistencyLevel.ONE)
+        d2.addCallback(lambda _: (result[0]['policyId'], result[0]['serverId']))
+        return d2
+
+    d.addCallback(do_alteration)
+
+    return d
+
+
 _client = None
 
 

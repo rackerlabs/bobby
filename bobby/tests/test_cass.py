@@ -443,3 +443,42 @@ class TestServerPolicies(_DBTestCase):
                 {'policyId': 'policy-abc'}, 1),
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)
+
+
+class TestAlterAlarmState(_DBTestCase):
+    """Test bobby.cass.create_policy."""
+
+    def test_alter_alarm_state(self):
+        """Creates and returns a policy dict."""
+        expected = {'policyId': 'policy-abc',
+                    'serverId': 'server-def',
+                    'alarmId': 'alghi',
+                    'checkId': 'chjkl',
+                    'state': True}
+
+        def execute(query, data, consistency):
+            if 'UPDATE' in query:
+                return defer.succeed(None)
+            elif 'SELECT' in query:
+                return defer.succeed([expected])
+        self.client.execute.side_effect = execute
+
+        d = cass.alter_alarm_state(expected['alarmId'], False)
+        result = self.successResultOf(d)
+
+        self.assertEqual(result, ('policy-abc', 'server-def'))
+
+        calls = [
+            mock.call(
+                'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;',
+                {'alarmId': 'alghi'},
+                1),
+            mock.call(
+                ('UPDATE serverpolicies SET state=:state WHERE "policyId"=:policyId AND '
+                 '"serverId"=:serverId;'),
+                {'state': False,
+                 'policyId': 'policy-abc',
+                 'serverId': 'server-def'},
+                1)
+        ]
+        self.assertEqual(self.client.execute.mock_calls, calls)
