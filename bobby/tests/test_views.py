@@ -408,10 +408,12 @@ class TestDeletePolicy(unittest.TestCase):
 class TestAlarm(unittest.TestCase):
     """Test MaaS alarm endpoint."""
 
+    @mock.patch('bobby.cass.check_quorum_health')
     @mock.patch('bobby.cass.alter_alarm_state')
-    def test_alarm(self, alter_alarm_state):
+    def test_alarm(self, alter_alarm_state, check_quorum_health):
         """Updates the status of an alarm for a server."""
         alter_alarm_state.return_value = defer.succeed(None)
+        check_quorum_health.return_value = defer.succeed(True)
 
         data = {
             'alarmId': 'alarm-abcdef',
@@ -423,4 +425,6 @@ class TestAlarm(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 200)
+
         alter_alarm_state.assert_called_once_with(data['alarmId'], data['status'])
+        check_quorum_health.assert_called_once_with(data['alarmId'])

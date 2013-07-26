@@ -324,7 +324,13 @@ def alarm(request):
 
     d = cass.alter_alarm_state(alarm_id, status)
 
-    def finish(_):
+    def check_quorum_health(_):
+        return cass.check_quorum_health(alarm_id)
+    d.addCallback(check_quorum_health)
+
+    def finish(health):
+        #TODO: do something with server health
+
         request.setResponseCode(200)
         request.finish()
     return d.addCallback(finish)
