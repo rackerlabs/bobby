@@ -319,8 +319,8 @@ def alarm(request):
     actual webhook data will look like.
     """
     content = json.loads(request.content.read())
-    alarm_id = content.get('alarmId')
-    status = content.get('status')
+    alarm_id = content.get('alarm').get('id')
+    status = content.get('details').get('state')
 
     d = cass.alter_alarm_state(alarm_id, status)
 
