@@ -320,8 +320,8 @@ def alarm(request):
 
     d = cass.alter_alarm_state(alarm_id, status)
 
-    def check_quorum_health(_):
-        return cass.check_quorum_health(alarm_id)
+    def check_quorum_health(policy_id):
+        return cass.check_quorum_health(policy_id)
     d.addCallback(check_quorum_health)
 
     def finish(health):

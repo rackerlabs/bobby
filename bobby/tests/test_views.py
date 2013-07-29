@@ -412,7 +412,7 @@ class TestAlarm(unittest.TestCase):
     @mock.patch('bobby.cass.alter_alarm_state')
     def test_alarm(self, alter_alarm_state, check_quorum_health):
         """Updates the status of an alarm for a server."""
-        alter_alarm_state.return_value = defer.succeed(None)
+        alter_alarm_state.return_value = defer.succeed('policy-abcdef')
         check_quorum_health.return_value = defer.succeed(True)
 
         data = {
@@ -522,4 +522,4 @@ class TestAlarm(unittest.TestCase):
 
         alter_alarm_state.assert_called_once_with(
             data['alarm']['id'], data['details']['state'])
-        check_quorum_health.assert_called_once_with(data['alarm']['id'])
+        check_quorum_health.assert_called_once_with('policy-abcdef')
