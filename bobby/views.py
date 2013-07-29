@@ -313,11 +313,7 @@ def delete_policy(request, tenant_id, group_id, policy_id):
 
 @app.route('/alarm', methods=['POST'])
 def alarm(request):
-    """Change the state of an alarm.
-
-    TODO: Currently, this is only stubbed out. I'm still not sure what the
-    actual webhook data will look like.
-    """
+    """Change the state of an alarm."""
     content = json.loads(request.content.read())
     alarm_id = content.get('alarm').get('id')
     status = content.get('details').get('state')
