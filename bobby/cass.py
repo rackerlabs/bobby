@@ -251,9 +251,6 @@ def check_quorum_health(alarm_id):
     :param alarm_id: The id of the alarm to check server state for.
     :return: True if the quorum is healthy, False if the quorum is unhealthy.
     """
-    count = []
-    serverpolicy = []
-
     query = 'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;'
 
     d = _client.execute(query,
@@ -266,31 +263,22 @@ def check_quorum_health(alarm_id):
         if len(result) > 1:
             return defer.fail(ExcessiveResultsError('alarm', alarm_id))
 
-        serverpolicy.append(result[0])
-        query = ('SELECT COUNT(*) FROM serverpolicies WHERE "policyId"=:policyId;')
+        query = ('SELECT * FROM serverpolicies WHERE "policyId"=:policyId;')
         return _client.execute(query,
-                               {'policyId': serverpolicy[0]['policyId']},
+                               {'policyId': result[0]['policyId']},
                                ConsistencyLevel.ONE)
     d.addCallback(get_related_server_count)
 
-    def get_servers_in_bad_state(total):
-        # First, set the count of total servers.
-        count.append(total)
+    def verify_health(serverpolicies):
+        total = len(serverpolicies)
+        critical = len([serverpolicy for serverpolicy in serverpolicies
+                        if serverpolicy['state'] != 'OK'])
 
-        query = ('SELECT COUNT(*) FROM serverpolicies WHERE "policyId"=:policyId AND "state"=:state;')
-        return _client.execute(query,
-                               {'policyId': serverpolicy[0]['policyId'],
-                                'state': 'CRITICAL'},
-                               ConsistencyLevel.ONE)
-    d.addCallback(get_servers_in_bad_state)
-
-    def verify_health(crit_count):
-        if crit_count >= count[0] / 2:
+        if critical >= total / 2.0:
             return defer.succeed(False)
         else:
             return defer.succeed(True)
     return d.addCallback(verify_health)
-
 
 _client = None
 

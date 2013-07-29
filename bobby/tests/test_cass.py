@@ -520,10 +520,24 @@ class TestCheckQuorumHealth(_DBTestCase):
         def execute(query, data, consistency):
             if 'alarmId' in data.keys():
                 return defer.succeed([{'policyId': 'policy-uvwxyz'}])
-            elif 'state' in data.keys():
-                return defer.succeed(4)
             elif 'policyId' in data.keys():
-                return defer.succeed(8)
+                return defer.succeed([
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-abc',
+                     'state': 'OK'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-def',
+                     'state': 'OK'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-ghi',
+                     'state': 'Critical'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-jkl',
+                     'state': 'Critical'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-mno',
+                     'state': 'Critical'},
+                ])
 
         self.client.execute.side_effect = execute
 
@@ -537,10 +551,24 @@ class TestCheckQuorumHealth(_DBTestCase):
         def execute(query, data, consistency):
             if 'alarmId' in data.keys():
                 return defer.succeed([{'policyId': 'policy-uvwxyz'}])
-            elif 'state' in data.keys():
-                return defer.succeed(3)
             elif 'policyId' in data.keys():
-                return defer.succeed(8)
+                return defer.succeed([
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-abc',
+                     'state': 'OK'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-def',
+                     'state': 'OK'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-ghi',
+                     'state': 'OK'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-jkl',
+                     'state': 'Critical'},
+                    {'policyId': 'policy-uvwxyz',
+                     'serverId': 'server-mno',
+                     'state': 'Critical'},
+                ])
 
         self.client.execute.side_effect = execute
 
@@ -554,10 +582,7 @@ class TestCheckQuorumHealth(_DBTestCase):
                 'SELECT * FROM serverpolicies WHERE "alarmId"=:alarmId;',
                 {'alarmId': 'alarm-abcdef'}, 1),
             mock.call(
-                'SELECT COUNT(*) FROM serverpolicies WHERE "policyId"=:policyId;',
+                'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;',
                 {'policyId': 'policy-uvwxyz'}, 1),
-            mock.call(
-                'SELECT COUNT(*) FROM serverpolicies WHERE "policyId"=:policyId AND "state"=:state;',
-                {'state': 'CRITICAL', 'policyId': 'policy-uvwxyz'}, 1)
         ]
         self.assertEqual(self.client.execute.mock_calls, calls)
