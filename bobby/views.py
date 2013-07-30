@@ -309,3 +309,24 @@ def delete_policy(request, tenant_id, group_id, policy_id):
         request.setResponseCode(204)
         request.finish()
     return d.addCallback(finish)
+
+
+@app.route('/alarm', methods=['POST'])
+def alarm(request):
+    """Change the state of an alarm."""
+    content = json.loads(request.content.read())
+    alarm_id = content.get('alarm').get('id')
+    status = content.get('details').get('state')
+
+    d = cass.alter_alarm_state(alarm_id, status)
+
+    def check_quorum_health(policy_id):
+        return cass.check_quorum_health(policy_id)
+    d.addCallback(check_quorum_health)
+
+    def finish(health):
+        #TODO: do something with server health
+
+        request.setResponseCode(200)
+        request.finish()
+    return d.addCallback(finish)
