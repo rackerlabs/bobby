@@ -244,6 +244,30 @@ def alter_alarm_state(alarm_id, state):
     return d
 
 
+def check_quorum_health(policy_id):
+    """
+    Check the status of an alarm across all servers.
+
+    :param policy_id: The id of the policy that needs a health check.
+    :return: True if the quorum is healthy, False if the quorum is unhealthy.
+    """
+    query = ('SELECT * FROM serverpolicies WHERE "policyId"=:policyId;')
+    d = _client.execute(query,
+                        {'policyId': policy_id},
+                        ConsistencyLevel.ONE)
+
+    def verify_health(serverpolicies):
+        total = len(serverpolicies)
+        critical = len([serverpolicy for serverpolicy in serverpolicies
+                        if serverpolicy['state'] != 'OK'])
+
+        if critical >= total / 2.0:
+            return defer.succeed(False)
+        else:
+            return defer.succeed(True)
+    return d.addCallback(verify_health)
+
+
 _client = None
 
 

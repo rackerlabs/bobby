@@ -482,3 +482,67 @@ class TestAlterAlarmState(_DBTestCase):
                 1)
         ]
         self.assertEqual(self.client.execute.mock_calls, calls)
+
+
+class TestCheckQuorumHealth(_DBTestCase):
+    """Test bobby.cass.check_quorum_health."""
+
+    def test_unhealthy(self):
+        """Results in a False when the quorum is unhealthy."""
+        def execute(query, data, consistency):
+            return defer.succeed([
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-abc',
+                 'state': 'OK'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-def',
+                 'state': 'OK'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-ghi',
+                 'state': 'Critical'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-jkl',
+                 'state': 'Critical'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-mno',
+                 'state': 'Critical'},
+            ])
+
+        self.client.execute.side_effect = execute
+
+        d = cass.check_quorum_health('alarm-uvwxyz')
+
+        result = self.successResultOf(d)
+        self.assertFalse(result)
+
+    def test_healthy(self):
+        """Results in a False when the quorum is healthy."""
+        def execute(query, data, consistency):
+            return defer.succeed([
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-abc',
+                 'state': 'OK'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-def',
+                 'state': 'OK'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-ghi',
+                 'state': 'OK'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-jkl',
+                 'state': 'Critical'},
+                {'policyId': 'policy-uvwxyz',
+                 'serverId': 'server-mno',
+                 'state': 'Critical'},
+            ])
+
+        self.client.execute.side_effect = execute
+
+        d = cass.check_quorum_health('policy-uvwxyz')
+
+        result = self.successResultOf(d)
+        self.assertTrue(result)
+
+        self.client.execute.assert_called_once_with(
+            'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;',
+            {'policyId': 'policy-uvwxyz'}, 1)
