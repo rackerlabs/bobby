@@ -1,3 +1,4 @@
+# Copyright 2013 Rackspace, Inc.
 """Tests for bobby.views."""
 import json
 import StringIO

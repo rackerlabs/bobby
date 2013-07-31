@@ -1,3 +1,4 @@
+# Copyright 2013 Rackspace, Inc.
 """
 Functions for getting data out of Cassandra.
 """
