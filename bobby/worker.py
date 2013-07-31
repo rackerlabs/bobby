@@ -13,13 +13,13 @@ def create_server_entity(tenant_id, policy_id, server_id):
     return defer.succeed(None)
 
 
-def apply_policies_to_server(tenant_id, group_id, server_id, nplan_id):
+def apply_policies_to_server(tenant_id, group_id, server_id, entity_id, nplan_id):
     """ Apply policies to a new server """
     d = cass.get_policies_by_group_id(group_id)
 
     def proc_policies(policies):
         deferreds = [
-            add_policy_to_server(tenant_id, policy['policyId'], server_id,
+            add_policy_to_server(tenant_id, policy['policyId'], server_id, entity_id,
                                  policy['checkTemplate'], policy['alarmTemplate'], nplan_id)
             for policy in policies
         ]
@@ -59,8 +59,8 @@ def apply_policy(tenant_id, group_id, policy_id, check_template, alarm_template,
 
     def proc_servers(servers):
         deferreds = [
-            add_policy_to_server(tenant_id, policy_id, server['serverId'], check_template,
-                                 alarm_template, nplan_id)
+            add_policy_to_server(tenant_id, policy_id, server['serverId'], server['entityId'],
+                                 check_template, alarm_template, nplan_id)
             for server in servers
         ]
         return defer.gatherResults(deferreds, consumeErrors=False)
@@ -69,12 +69,13 @@ def apply_policy(tenant_id, group_id, policy_id, check_template, alarm_template,
     return d
 
 
-def add_policy_to_server(tenant_id, policy_id, server_id, check_template, alarm_template, nplan_id):
+def add_policy_to_server(tenant_id, policy_id, server_id, entity_id, check_template, alarm_template,
+                         nplan_id):
     """Adds a single policy to a server"""
-    d = ele.add_check(tenant_id, policy_id, server_id, check_template)
+    d = ele.add_check(tenant_id, policy_id, entity_id, check_template)
 
     def add_alarm(check_id):
-        d = ele.add_alarm(tenant_id, policy_id, server_id, check_id, alarm_template, nplan_id)
+        d = ele.add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id)
         d.addCallback(lambda alarm_id: (check_id, alarm_id))
         return d
     d.addCallback(add_alarm)

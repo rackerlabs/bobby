@@ -24,19 +24,19 @@ the calls we'll make against MaaS.
 from twisted.internet import defer
 
 
-def add_check(tenant_id, policy_id, server_id, check_template):
+def add_check(tenant_id, policy_id, entity_id, check_template):
     """ Add a check to the MaaS system """
     return defer.succeed('ch')
 
 
-def add_alarm(tenant_id, policy_id, server_id, check_id, alarm_template, nplan_id):
+def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id):
     """ Add an alarm to the MaaS system """
     return defer.succeed('al')
 
 
 def add_notification(tenant_id):
     """ Add a notification to the MaaS system """
-    return defer.succeed('no')
+    return defer.succeed('nt')
 
 
 def add_notification_plan(tenant_id, notification):

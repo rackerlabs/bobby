@@ -47,13 +47,14 @@ class TestAddPolicyToServer(_WorkerTestCase):
         mock_add_alarm.return_value = defer.succeed('alBlah')
         self.client.execute.return_value = defer.succeed(None)
 
-        d = worker.add_policy_to_server('t1', 'p1', 's1', example_check_template, "ALARM_DSL", "npBlah")
+        d = worker.add_policy_to_server('t1', 'p1', 's1', 'enOne',
+                                        example_check_template, "ALARM_DSL", "npBlah")
 
         result = self.successResultOf(d)
         self.assertEqual(result, None)
 
-        mock_add_check.assert_called_once_with('t1', 'p1', 's1', example_check_template)
-        mock_add_alarm.assert_called_once_with('t1', 'p1', 's1', 'chBlah', "ALARM_DSL", "npBlah")
+        mock_add_check.assert_called_once_with('t1', 'p1', 'enOne', example_check_template)
+        mock_add_alarm.assert_called_once_with('t1', 'p1', 'enOne', 'chBlah', "ALARM_DSL", "npBlah")
         self.assertEqual(
             self.client.execute.mock_calls,
             [mock.call(('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", '
@@ -70,7 +71,7 @@ class TestCreateGroup(_WorkerTestCase):
         """ Basic success case """
         expected = {'groupId': 'g1',
                     'tenantId': '101010',
-                    'notification': 'noBlah',
+                    'notification': 'ntBlah',
                     'notificationPlan': 'npBlah'}
 
         def execute(query, data, consistency):
@@ -80,7 +81,7 @@ class TestCreateGroup(_WorkerTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        mock_add_notification.return_value = defer.succeed('noBlah')
+        mock_add_notification.return_value = defer.succeed('ntBlah')
         mock_add_notification_plan.return_value = defer.succeed('npBlah')
 
         d = worker.create_group('101010', 'g1')
@@ -89,7 +90,7 @@ class TestCreateGroup(_WorkerTestCase):
         self.assertEqual(result, expected)
 
         mock_add_notification.assert_called_once_with('101010')
-        mock_add_notification_plan.assert_called_once_with('101010', 'noBlah')
+        mock_add_notification_plan.assert_called_once_with('101010', 'ntBlah')
 
 
 class TestAddServer(_WorkerTestCase):
@@ -114,15 +115,15 @@ class TestAddServer(_WorkerTestCase):
                 return defer.succeed(expected)
         self.client.execute.side_effect = execute
 
-        def add_check(tenant_id, policy_id, server_id, check_template):
-            return defer.succeed('ch{}{}'.format(server_id, policy_id))
+        def add_check(tenant_id, policy_id, entity_id, check_template):
+            return defer.succeed('ch{}{}'.format(entity_id, policy_id))
 
-        def add_alarm(tenant_id, policy_id, server_id, check_id, alarm_template, nplan_id):
-            return defer.succeed('al{}{}'.format(server_id, policy_id))
+        def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id):
+            return defer.succeed('al{}{}'.format(entity_id, policy_id))
         mock_add_alarm.side_effect = add_alarm
         mock_add_check.side_effect = add_check
 
-        d = worker.apply_policies_to_server('101010', 'group-abc', 'server1', 'npBlah')
+        d = worker.apply_policies_to_server('101010', 'group-abc', 'server1', 'enOne', 'npBlah')
         result = self.successResultOf(d)
         self.assertEqual(result, None)
 
@@ -133,14 +134,14 @@ class TestAddServer(_WorkerTestCase):
                        1),
              mock.call(('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", '
                        'state) VALUES (:serverId, :policyId, :alarmId, :checkId, false);'),
-                       {'checkId': 'chserver1policy-abc', 'serverId': 'server1',
-                        'policyId': 'policy-abc', 'alarmId': 'alserver1policy-abc'},
+                       {'checkId': 'chenOnepolicy-abc', 'serverId': 'server1',
+                        'policyId': 'policy-abc', 'alarmId': 'alenOnepolicy-abc'},
                        1),
              mock.call(
                  ('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", state) '
                   'VALUES (:serverId, :policyId, :alarmId, :checkId, false);'),
-                 {'checkId': 'chserver1policy-xyz', 'serverId': 'server1',
-                  'policyId': 'policy-xyz', 'alarmId': 'alserver1policy-xyz'},
+                 {'checkId': 'chenOnepolicy-xyz', 'serverId': 'server1',
+                  'policyId': 'policy-xyz', 'alarmId': 'alenOnepolicy-xyz'},
                  1)])
 
 
@@ -164,11 +165,11 @@ class TestAddPolicy(_WorkerTestCase):
                 return defer.succeed(expected)
         self.client.execute.side_effect = execute
 
-        def add_check(tenant_id, policy_id, server_id, check_template):
-            return defer.succeed('ch{}{}'.format(server_id, policy_id))
+        def add_check(tenant_id, policy_id, entity_id, check_template):
+            return defer.succeed('ch{}{}'.format(entity_id, policy_id))
 
-        def add_alarm(tenant_id, policy_id, server_id, check_id, alarm_template, nplan_id):
-            return defer.succeed('al{}{}'.format(server_id, policy_id))
+        def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id):
+            return defer.succeed('al{}{}'.format(entity_id, policy_id))
         mock_add_alarm.side_effect = add_alarm
         mock_add_check.side_effect = add_check
 
@@ -191,12 +192,12 @@ class TestAddPolicy(_WorkerTestCase):
                        1),
              mock.call(('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", '
                        'state) VALUES (:serverId, :policyId, :alarmId, :checkId, false);'),
-                       {'checkId': 'chserver-abcpolicy1', 'serverId': 'server-abc',
-                        'policyId': 'policy1', 'alarmId': 'alserver-abcpolicy1'},
+                       {'checkId': 'chentity-ghipolicy1', 'serverId': 'server-abc',
+                        'policyId': 'policy1', 'alarmId': 'alentity-ghipolicy1'},
                        1),
              mock.call(
                  ('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", state) '
                   'VALUES (:serverId, :policyId, :alarmId, :checkId, false);'),
-                 {'checkId': 'chserver-xyzpolicy1', 'serverId': 'server-xyz',
-                  'policyId': 'policy1', 'alarmId': 'alserver-xyzpolicy1'},
+                 {'checkId': 'chentity-uvwpolicy1', 'serverId': 'server-xyz',
+                  'policyId': 'policy1', 'alarmId': 'alentity-uvwpolicy1'},
                  1)])

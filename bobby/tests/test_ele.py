@@ -10,11 +10,11 @@ class TestEleApi(unittest.TestCase):
 
     def test_add_check(self):
         """ Test add_check """
-        ele.add_check('t1', 'p1', 's1', {})
+        ele.add_check('t1', 'p1', 'en1', {})
 
     def test_add_alarm(self):
         """ Test add_alarm """
-        ele.add_alarm('t1', 'p1', 's1', 'ch1', 'ALARM DSL', 'np')
+        ele.add_alarm('t1', 'p1', 'en1', 'ch1', 'ALARM DSL', 'np')
 
     def test_add_notification(self):
         """ Test add_notification """
@@ -22,7 +22,7 @@ class TestEleApi(unittest.TestCase):
 
     def test_add_notification_plan(self):
         """ Test add_notification_plan """
-        ele.add_notification_plan('t1', 'no')
+        ele.add_notification_plan('t1', 'nt')
 
     def test_fetch_entity_by_uuid(self):
         """ Test fetch_entity_by_uuid """
