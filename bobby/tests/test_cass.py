@@ -93,7 +93,7 @@ class TestCreateGroup(_DBTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = cass.create_group(expected['groupId'], expected['tenantId'],
+        d = cass.create_group(expected['tenantId'], expected['groupId'],
                               expected['notification'], expected['notificationPlan'])
 
         result = self.successResultOf(d)

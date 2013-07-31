@@ -41,7 +41,7 @@ def get_group_by_id(tenant_id, group_id):
     return d.addCallback(return_group)
 
 
-def create_group(group_id, tenant_id, notification, notification_plan):
+def create_group(tenant_id, group_id, notification, notification_plan):
     """Create a new group and return that new group."""
 
     query = ' '.join([
