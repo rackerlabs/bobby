@@ -1,3 +1,4 @@
+# Copyright 2013 Rackspace, Inc.
 """HTTP REST API endpoints."""
 import json
 
