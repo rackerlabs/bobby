@@ -19,6 +19,7 @@ class BobbyDummyRequest(DummyRequest):
         self.content = StringIO.StringIO()
         self.content.write(content)
         self.content.seek(0)
+        self.clientproto = 'HTTP/1.1'
 
     def URLPath(self):
         """Fake URLPath object."""

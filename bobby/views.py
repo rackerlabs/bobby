@@ -5,12 +5,14 @@ import json
 from klein import Klein
 
 from bobby import cass
+from otter.rest.decorators import with_transaction_id
 
 app = Klein()
 
 
 @app.route('/<string:tenant_id>/groups', methods=['GET'])
-def get_groups(request, tenant_id):
+@with_transaction_id()
+def get_groups(request, log, tenant_id):
     """Get all groups owned by a given tenant_id.
 
     :param str tenant_id: A tenant id
@@ -26,7 +28,8 @@ def get_groups(request, tenant_id):
 
 
 @app.route('/<string:tenant_id>/groups', methods=['POST'])
-def create_group(request, tenant_id):
+@with_transaction_id()
+def create_group(request, log, tenant_id):
     """Create a new group.
 
     Receive application/json content for new group creation.
@@ -60,7 +63,8 @@ def create_group(request, tenant_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['GET'])
-def get_group(request, tenant_id, group_id):
+@with_transaction_id()
+def get_group(request, log, tenant_id, group_id):
     """Get a group.
 
     :param str tenant_id: A tenant id
@@ -86,7 +90,8 @@ def get_group(request, tenant_id, group_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['DELETE'])
-def delete_group(request, tenant_id, group_id):
+@with_transaction_id()
+def delete_group(request, log, tenant_id, group_id):
     """Delete a group.
 
     :param str tenant_id: A tenant id
@@ -102,7 +107,8 @@ def delete_group(request, tenant_id, group_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['GET'])
-def get_servers(request, tenant_id, group_id):
+@with_transaction_id()
+def get_servers(request, log, tenant_id, group_id):
     """Get all servers owned by a given group_id.
 
     :param str tenant_id: A tenant id.
@@ -119,7 +125,8 @@ def get_servers(request, tenant_id, group_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['POST'])
-def create_server(request, tenant_id, group_id):
+@with_transaction_id()
+def create_server(request, log, tenant_id, group_id):
     """Create a new server.
 
     Receive application/json content for new server creation.
@@ -158,7 +165,8 @@ def create_server(request, tenant_id, group_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['GET'])
-def get_server(request, tenant_id, group_id, server_id):
+@with_transaction_id()
+def get_server(request, log, tenant_id, group_id, server_id):
     """Get a server.
 
     :param str tenant_id: A tenant id
@@ -186,7 +194,8 @@ def get_server(request, tenant_id, group_id, server_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['DELETE'])
-def delete_server(request, tenant_id, group_id, server_id):
+@with_transaction_id()
+def delete_server(request, log, tenant_id, group_id, server_id):
     """Delete a server.
 
     :param str tenant_id: A tenant id
@@ -206,7 +215,8 @@ def delete_server(request, tenant_id, group_id, server_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])
-def get_policies(request, tenant_id, group_id):
+@with_transaction_id()
+def get_policies(request, log, tenant_id, group_id):
     """Get all policies owned by a given group_id.
 
     :param str tenant_id: A tenant id.
@@ -223,7 +233,8 @@ def get_policies(request, tenant_id, group_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['POST'])
-def create_policy(request, tenant_id, group_id):
+@with_transaction_id()
+def create_policy(request, log, tenant_id, group_id):
     """Create a new policy.
 
     Receive application/json content for new policy creation.
@@ -262,7 +273,8 @@ def create_policy(request, tenant_id, group_id):
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['GET'])
-def get_policy(request, tenant_id, group_id, policy_id):
+@with_transaction_id()
+def get_policy(request, log, tenant_id, group_id, policy_id):
     """Get a policy.
 
     :param str tenant_id: A tenant id
@@ -293,7 +305,8 @@ def get_policy(request, tenant_id, group_id, policy_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>',
            methods=['DELETE'])
-def delete_policy(request, tenant_id, group_id, policy_id):
+@with_transaction_id()
+def delete_policy(request, log, tenant_id, group_id, policy_id):
     """Delete a policy.
 
     :param str tenant_id: A tenant id
@@ -313,7 +326,8 @@ def delete_policy(request, tenant_id, group_id, policy_id):
 
 
 @app.route('/alarm', methods=['POST'])
-def alarm(request):
+@with_transaction_id()
+def alarm(request, log):
     """Change the state of an alarm."""
     content = json.loads(request.content.read())
     alarm_id = content.get('alarm').get('id')
