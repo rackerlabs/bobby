@@ -209,6 +209,14 @@ def get_policy_state(policy_id):
                            ConsistencyLevel.ONE)
 
 
+def get_serverpolicies_by_policy_id(policy_id):
+    """Get all serverpolicies for a server."""
+    query = 'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;'
+
+    d = _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)
+    return d
+
+
 def alter_alarm_state(alarm_id, state):
     """
     Get the alarm locator and alter the state for that alarm.
