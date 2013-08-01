@@ -276,6 +276,37 @@ class TestDeleteServer(unittest.TestCase):
         delete_server.assert_called_once_with('101010', 'opqrst')
 
 
+class TestGetServerPolicies(unittest.TestCase):
+    """Test GET /{tenantId}/groups/{groupId}/servers/{serverId}/serverPolicies"""
+
+    @mock.patch('bobby.cass.get_serverpolicies_by_policy_id')
+    def test_get_serverpolicies(self, get_serverpolicies_by_policy_id):
+        expected = {
+            'serverpolicies': [
+                {'policyId': 'policy-xyz',
+                 'serverId': 'opqrst',
+                 'state': 'OK',
+                 'alarmId': 'alarm-rst',
+                 'checkId': 'check-uvw'},
+                {'policyId': 'policy-abc',
+                 'serverId': 'opqrst',
+                 'state': 'OK',
+                 'alarmId': 'alarm-def',
+                 'checkId': 'check-ghi'}
+            ]
+        }
+        get_serverpolicies_by_policy_id.return_value = defer.succeed(
+            expected['serverpolicies'])
+
+        request = BobbyDummyRequest('/101010/groups/uvwxyz/policies/opqrst/serverPolicies')
+        d = views.get_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 200)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, expected)
+
+
 class TestGetPolicies(unittest.TestCase):
     """Test GET /{tenantId}/groups/{groupId}."""
 
