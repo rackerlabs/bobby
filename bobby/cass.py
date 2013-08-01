@@ -209,8 +209,25 @@ def get_policy_state(policy_id):
                            ConsistencyLevel.ONE)
 
 
-def get_serverpolicies_by_policy_id(policy_id):
+def get_serverpolicies_by_server_id(group_id, server_id):
     """Get all serverpolicies for a server."""
+    query = 'SELECT * FROM policies WHERE "groupId"=:groupId'
+    d = _client.execute(query,
+                        {'groupId': group_id},
+                        ConsistencyLevel.ONE)
+
+    def find_server_policies(policies):
+        policy_list = [policy['policyId'] for policy in policies]
+        query = 'SELECT * FROM serverpolicies WHERE "policyId" IN (:policies) AND "serverId"=:serverId'
+        return _client.execute(query,
+                               {'policies': policy_list,
+                                'serverId': server_id},
+                               ConsistencyLevel.ONE)
+    return d.addCallback(find_server_policies)
+
+
+def get_serverpolicies_by_policy_id(policy_id):
+    """Get all serverpolicies for a policy."""
     query = 'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;'
 
     d = _client.execute(query, {'policyId': policy_id}, ConsistencyLevel.ONE)

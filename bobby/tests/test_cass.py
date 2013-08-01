@@ -253,6 +253,40 @@ class TestDeleteServer(_DBTestCase):
         self.assertEqual(calls, self.client.execute.mock_calls)
 
 
+class TestGetServerPolicesByServerId(_DBTestCase):
+    """Test bobby.cass.get_serverpolicies_by_server_id."""
+
+    def test_get_serverpolicies_by_server_id(self):
+        policies = [{'policyId': 'policy-abc'},
+                    {'policyId': 'policy-xyz'}]
+        expected = [{'policyId': 'policy-abc',
+                     'serverId': 'server-abc'},
+                    {'policyId': 'policy-xyz',
+                     'serverId': 'server-abc'}]
+
+        def execute(query, args, consistency):
+            if 'FROM policies' in query:
+                return defer.succeed(policies)
+            else:
+                return defer.succeed(expected)
+        self.client.execute.side_effect = execute
+
+        d = cass.get_serverpolicies_by_server_id('group-abc', 'server-abc')
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+
+        calls = [
+            mock.call('SELECT * FROM policies WHERE "groupId"=:groupId',
+                      {'groupId': 'group-abc'}, 1),
+            mock.call('SELECT * FROM serverpolicies WHERE "policyId" IN (:policies) AND "serverId"=:serverId',
+                      {'serverId': 'server-abc',
+                       'policies': ['policy-abc', 'policy-xyz']},
+                      1)
+        ]
+        self.assertEqual(self.client.execute.mock_calls, calls)
+
+
 class TestGetServerPolicesByPolicyId(_DBTestCase):
     """Test bobby.cass.get_serverpolicies_by_policy_id."""
 
