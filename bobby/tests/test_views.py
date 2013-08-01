@@ -299,7 +299,7 @@ class TestGetServerPolicies(unittest.TestCase):
             expected['serverpolicies'])
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz/policies/opqrst/serverPolicies')
-        d = views.get_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
+        d = views.get_policy_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 200)

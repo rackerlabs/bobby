@@ -327,7 +327,7 @@ def delete_policy(request, log, tenant_id, group_id, policy_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>/serverPolicies',
            methods=['GET'])
-def get_serverpolicies(request, tenant_id, group_id, policy_id):
+def get_policy_serverpolicies(request, tenant_id, group_id, policy_id):
     """Get all serverpolicies owned by a given server_id.
 
     :param str tenant_id: A tenant id.
