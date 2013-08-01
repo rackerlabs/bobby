@@ -253,7 +253,7 @@ class TestDeleteServer(_DBTestCase):
         self.assertEqual(calls, self.client.execute.mock_calls)
 
 
-class TestGetServerPolicesByServerId(_DBTestCase):
+class TestGetServerPoliciesByServerId(_DBTestCase):
     """Test bobby.cass.get_serverpolicies_by_server_id."""
 
     def test_get_serverpolicies_by_server_id(self):
@@ -285,27 +285,6 @@ class TestGetServerPolicesByServerId(_DBTestCase):
                       1)
         ]
         self.assertEqual(self.client.execute.mock_calls, calls)
-
-
-class TestGetServerPolicesByPolicyId(_DBTestCase):
-    """Test bobby.cass.get_serverpolicies_by_policy_id."""
-
-    def test_get_serverpolicies_by_policy_id(self):
-        expected = []
-
-        def execute(*args, **kwargs):
-            return defer.succeed(expected)
-        self.client.execute.side_effect = execute
-
-        d = cass.get_serverpolicies_by_policy_id('policy-abc')
-
-        result = self.successResultOf(d)
-        self.assertEqual(result, expected)
-        self.client.execute.assert_called_once_with(
-            'SELECT * FROM serverpolicies WHERE "policyId"=:policyId;',
-            {'policyId': 'policy-abc'},
-            1
-        )
 
 
 class TestGetPoliciesByGroupId(_DBTestCase):

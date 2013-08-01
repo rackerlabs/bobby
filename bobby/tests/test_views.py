@@ -279,8 +279,8 @@ class TestDeleteServer(unittest.TestCase):
 class TestGetServerPolicies(unittest.TestCase):
     """Test GET /{tenantId}/groups/{groupId}/servers/{serverId}/serverPolicies"""
 
-    @mock.patch('bobby.cass.get_serverpolicies_by_policy_id')
-    def test_get_serverpolicies(self, get_serverpolicies_by_policy_id):
+    @mock.patch('bobby.cass.get_serverpolicies_by_server_id')
+    def test_get_serverpolicies(self, get_serverpolicies_by_server_id):
         expected = {
             'serverpolicies': [
                 {'policyId': 'policy-xyz',
@@ -295,11 +295,11 @@ class TestGetServerPolicies(unittest.TestCase):
                  'checkId': 'check-ghi'}
             ]
         }
-        get_serverpolicies_by_policy_id.return_value = defer.succeed(
+        get_serverpolicies_by_server_id.return_value = defer.succeed(
             expected['serverpolicies'])
 
-        request = BobbyDummyRequest('/101010/groups/uvwxyz/policies/opqrst/serverPolicies')
-        d = views.get_policy_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
+        request = BobbyDummyRequest('/101010/groups/uvwxyz/servers/opqrst/serverPolicies')
+        d = views.get_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 200)

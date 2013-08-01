@@ -214,6 +214,26 @@ def delete_server(request, log, tenant_id, group_id, server_id):
     return d.addCallback(finish)
 
 
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>/serverPolicies',
+           methods=['GET'])
+def get_serverpolicies(request, tenant_id, group_id, server_id):
+    """Get all serverpolicies owned by a given server_id.
+
+    :param str tenant_id: A tenant id.
+    :param str group_id: A group id.
+    :param str server_id: A server id.
+    """
+    d = cass.get_serverpolicies_by_server_id(group_id, server_id)
+
+    def serialize(serverpolicies):
+        result = {'serverpolicies': serverpolicies}
+        request.setResponseCode(200)
+        request.setHeader('Content-Type', 'application/json')
+        request.write(json.dumps(result))
+        request.finish()
+    return d.addCallback(serialize)
+
+
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])
 @with_transaction_id()
 def get_policies(request, log, tenant_id, group_id):
@@ -323,25 +343,6 @@ def delete_policy(request, log, tenant_id, group_id, policy_id):
         request.setResponseCode(204)
         request.finish()
     return d.addCallback(finish)
-
-
-@app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>/serverPolicies',
-           methods=['GET'])
-def get_policy_serverpolicies(request, tenant_id, group_id, policy_id):
-    """Get all serverpolicies owned by a given server_id.
-
-    :param str tenant_id: A tenant id.
-    :param str group_id: A group id.
-    """
-    d = cass.get_serverpolicies_by_policy_id(policy_id)
-
-    def serialize(serverpolicies):
-        result = {'serverpolicies': serverpolicies}
-        request.setResponseCode(200)
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(result))
-        request.finish()
-    return d.addCallback(serialize)
 
 
 @app.route('/alarm', methods=['POST'])
