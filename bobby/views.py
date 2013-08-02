@@ -3,6 +3,7 @@
 import json
 
 from klein import Klein
+from twisted.internet import defer
 
 from bobby import cass
 from otter.rest.decorators import with_transaction_id
@@ -232,6 +233,52 @@ def get_serverpolicies(request, tenant_id, group_id, server_id):
         request.write(json.dumps(result))
         request.finish()
     return d.addCallback(serialize)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>/serverPolicies',
+           methods=['POST'])
+def create_serverpolicies(request, tenant_id, group_id, server_id):
+    """Create serverpolicies based on the list of policies provided.
+
+    :param str tenant_id: A tenant id.
+    :param str group_id: A group id.
+    :param str server_id: A server id.
+    """
+    policies = json.loads(request.content.read())
+
+    deferreds = []
+    for policy in policies:
+        d = cass.add_serverpolicy(server_id, policy)
+        deferreds.append(d)
+    d = defer.DeferredList(deferreds)
+
+    def finish(_):
+        request.setResponseCode(201)
+        request.finish()
+    return d.addCallback(finish)
+
+
+@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>/serverPolicies',
+           methods=['DELETE'])
+def delete_serverpolicies(request, tenant_id, group_id, server_id):
+    """Delete serverpolicies based on the list of policies provided.
+
+    :param str tenant_id: A tenant id.
+    :param str group_id: A group id.
+    :param str server_id: A server id.
+    """
+    policies = json.loads(request.content.read())
+
+    deferreds = []
+    for policy in policies:
+        d = cass.delete_serverpolicy(server_id, policy)
+        deferreds.append(d)
+    d = defer.DeferredList(deferreds)
+
+    def finish(_):
+        request.setResponseCode(204)
+        request.finish()
+    return d.addCallback(finish)
 
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])

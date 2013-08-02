@@ -307,6 +307,60 @@ class TestGetServerPolicies(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
+class TestCreateServerPolicies(unittest.TestCase):
+    """Test POST /{tenantId}/groups/{groupId}/servers/{serverId}/serverPolicies"""
+
+    @mock.patch('bobby.cass.add_serverpolicy')
+    def test_create_serverpolicies(self, add_serverpolicy):
+        """Creates a server and returns 201."""
+        add_serverpolicy.return_value = defer.succeed(None)
+
+        request_json = [
+            'policy-abc',
+            'policy-def'
+        ]
+        request = BobbyDummyRequest(
+            '/101010/groups/uvwxyz/servers/opqrst/serverPolicies',
+            content=json.dumps(request_json))
+        request.method = 'POST'
+        d = views.create_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 201)
+        calls = [
+            mock.call('opqrst', 'policy-abc'),
+            mock.call('opqrst', 'policy-def')
+        ]
+        self.assertEqual(add_serverpolicy.mock_calls, calls)
+
+
+class TestDeleteServerPolicies(unittest.TestCase):
+    """Test DELETE /{tenantId}/groups/{groupId}/servers/{serverId}/serverPolicies"""
+
+    @mock.patch('bobby.cass.delete_serverpolicy')
+    def test_delete_serverpolicies(self, delete_serverpolicy):
+        """Deletes a server and returns 402."""
+        delete_serverpolicy.return_value = defer.succeed(None)
+
+        request_json = [
+            'policy-abc',
+            'policy-def'
+        ]
+        request = BobbyDummyRequest(
+            '/101010/groups/uvwxyz/servers/opqrst/serverPolicies',
+            content=json.dumps(request_json))
+        request.method = 'DELETE'
+        d = views.delete_serverpolicies(request, '101010', 'uvwxyz', 'opqrst')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 204)
+        calls = [
+            mock.call('opqrst', 'policy-abc'),
+            mock.call('opqrst', 'policy-def')
+        ]
+        self.assertEqual(delete_serverpolicy.mock_calls, calls)
+
+
 class TestGetPolicies(unittest.TestCase):
     """Test GET /{tenantId}/groups/{groupId}."""
 
