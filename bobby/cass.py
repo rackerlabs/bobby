@@ -254,7 +254,6 @@ def delete_serverpolicy(server_id, policy_id):
     return d
 
 
-
 def alter_alarm_state(alarm_id, state):
     """
     Get the alarm locator and alter the state for that alarm.
