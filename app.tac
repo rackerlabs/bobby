@@ -5,7 +5,7 @@ from twisted.application import service, strports
 from twisted.internet import endpoints, reactor
 
 from bobby import cass
-from bobby.views import app
+from bobby.views import BobbyViews
 
 
 client = CQLClient(
@@ -16,6 +16,6 @@ client = CQLClient(
 cass.set_client(client)
 
 application = service.Application('dammit Bobby')
-server = strports.service('tcp:9876', server.Site(app.resource()))
+server = strports.service('tcp:9876', server.Site(BobbyViews.app.resource()))
 
 server.setServiceParent(application)

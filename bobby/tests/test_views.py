@@ -8,7 +8,10 @@ from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.web.test.requesthelper import DummyRequest
 
-from bobby import views
+from bobby.views import BobbyViews
+
+global views
+views = BobbyViews()
 
 
 class BobbyDummyRequest(DummyRequest):
