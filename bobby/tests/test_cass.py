@@ -287,6 +287,38 @@ class TestGetServerPoliciesByServerId(_DBTestCase):
         self.assertEqual(self.client.execute.mock_calls, calls)
 
 
+class TestAddServerpolicy(_DBTestCase):
+    """Test bobby.cass.add_serverpolicy"""
+
+    def test_add_serverpolicy(self):
+        """Adding a server policy is an insert in the database."""
+        self.client.execute.return_value = defer.succeed(None)
+
+        d = cass.add_serverpolicy('server-abc', 'policy-def')
+
+        self.successResultOf(d)
+        self.client.execute.assert_called_once_with(
+            'INSERT INTO serverpolicy ("serverId", "policyId") VALUES (:serverId, :policyId);',
+            {'serverId': 'server-abc', 'policyId': 'policy-def'},
+            1)
+
+
+class TestDeleteServerpolicy(_DBTestCase):
+    """Test bobby.cass.delete_serverpolicy"""
+
+    def test_delete_serverpolicy(self):
+        """Deleting a server policy is a delete in the database."""
+        self.client.execute.return_value = defer.succeed(None)
+
+        d = cass.delete_serverpolicy('server-abc', 'policy-def')
+
+        self.successResultOf(d)
+        self.client.execute.assert_called_once_with(
+            'DELETE FROM serverpolicy WHERE "serverId"=:serverId AND "policyId"=:policyId;',
+            {'serverId': 'server-abc', 'policyId': 'policy-def'},
+            1)
+
+
 class TestGetPoliciesByGroupId(_DBTestCase):
     """Test bobby.cass.get_policies_by_group_id."""
 

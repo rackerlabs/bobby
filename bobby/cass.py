@@ -226,6 +226,35 @@ def get_serverpolicies_by_server_id(group_id, server_id):
     return d.addCallback(find_server_policies)
 
 
+def add_serverpolicy(server_id, policy_id):
+    """Add a serverpolicy with the given server_id and policy_id.
+
+    :param str server_id: A server_id
+    :param str policy_id: A policy_id
+    """
+    query = 'INSERT INTO serverpolicy ("serverId", "policyId") VALUES (:serverId, :policyId);'
+
+    d = _client.execute(query,
+                        {'serverId': server_id, 'policyId': policy_id},
+                        ConsistencyLevel.ONE)
+    return d
+
+
+def delete_serverpolicy(server_id, policy_id):
+    """Delete a serverpolicy with the given server_id and policy_id.
+
+    :param str server_id: A server_id
+    :param str policy_id: A policy_id
+    """
+    query = 'DELETE FROM serverpolicy WHERE "serverId"=:serverId AND "policyId"=:policyId;'
+
+    d = _client.execute(query,
+                        {'serverId': server_id, 'policyId': policy_id},
+                        ConsistencyLevel.ONE)
+    return d
+
+
+
 def alter_alarm_state(alarm_id, state):
     """
     Get the alarm locator and alter the state for that alarm.
