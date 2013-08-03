@@ -106,7 +106,7 @@ class TestCreateGroup(unittest.TestCase):
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
         create_group.assert_called_once_with(
-            'uvwxyz', '010101', 'notification-abc', 'notification-def')
+            '010101', 'uvwxyz', 'notification-abc', 'notification-def')
 
 
 class TestGetGroup(unittest.TestCase):
@@ -273,7 +273,7 @@ class TestDeleteServer(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_server.assert_called_once_with('101010', 'opqrst')
+        delete_server.assert_called_once_with('101010', 'uvwxyz', 'opqrst')
 
 
 class TestGetServerPolicies(unittest.TestCase):
@@ -489,7 +489,7 @@ class TestDeletePolicy(unittest.TestCase):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_policy.assert_called_once_with('opqrst')
+        delete_policy.assert_called_once_with('uvwxyz', 'opqrst')
 
 
 class TestAlarm(unittest.TestCase):

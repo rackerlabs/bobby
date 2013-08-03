@@ -42,7 +42,7 @@ def create_group(request, log, tenant_id):
     notification = content.get('notification')
     notification_plan = content.get('notificationPlan')
 
-    d = cass.create_group(group_id, tenant_id, notification, notification_plan)
+    d = cass.create_group(tenant_id, group_id, notification, notification_plan)
 
     def _serialize_object(group):
         # XXX: the actual way to do this is using a json encoder. Not now.
@@ -174,7 +174,7 @@ def get_server(request, log, tenant_id, group_id, server_id):
     :param str group_id: A group id
     :param str server_id: A server id
     """
-    d = cass.get_server_by_server_id(tenant_id, server_id)
+    d = cass.get_server_by_server_id(tenant_id, group_id, server_id)
 
     def serialize(server):
         json_object = {
@@ -203,7 +203,7 @@ def delete_server(request, log, tenant_id, group_id, server_id):
     :param str group_id: A groud id
     :param str server_id: A server id
     """
-    d = cass.delete_server(tenant_id, server_id)
+    d = cass.delete_server(tenant_id, group_id, server_id)
 
     # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
     # here...
@@ -380,7 +380,7 @@ def delete_policy(request, log, tenant_id, group_id, policy_id):
     :param str group_id: A groud id
     :param str policy_id: A policy id
     """
-    d = cass.delete_policy(policy_id)
+    d = cass.delete_policy(group_id, policy_id)
 
     # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
     # here...
