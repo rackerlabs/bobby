@@ -17,7 +17,7 @@ class _WorkerTestCase(unittest.TestCase):
         cass.set_client(self.client)
 
 
-class TestAddServer(_WorkerTestCase):
+class TestCreateServerEntity(_WorkerTestCase):
     """ Test that we can add a server """
     @mock.patch('bobby.worker.ele.fetch_entity_by_uuid')
     @mock.patch('bobby.worker.apply_policies_to_server')
@@ -187,8 +187,8 @@ class TestAddPolicy(_WorkerTestCase):
 
         self.assertEqual(
             self.client.execute.mock_calls,
-            [mock.call('SELECT * FROM servers WHERE "groupId"=:groupId AND "tenantId"=:tenantId;',
-                       {'groupId': 'group-abc', 'tenantId': '101010'},
+            [mock.call('SELECT * FROM servers WHERE "groupId"=:groupId;',
+                       {'groupId': 'group-abc'},
                        1),
              mock.call(('INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", "checkId", '
                        'state) VALUES (:serverId, :policyId, :alarmId, :checkId, false);'),

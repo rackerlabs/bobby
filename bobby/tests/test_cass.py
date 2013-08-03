@@ -53,8 +53,8 @@ class TestGetGroupById(_DBTestCase):
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM groups WHERE "groupId"=:groupId;',
-            {'groupId': 'group-abc'},
+            'SELECT * FROM groups WHERE "tenantId"=:tenantId AND "groupId"=:groupId;',
+            {'tenantId': '101010', 'groupId': 'group-abc'},
             1)
 
     def test_get_group_by_id_no_such_id(self):
@@ -102,16 +102,16 @@ class TestCreateGroup(_DBTestCase):
             self.client.execute.mock_calls,
             [mock.call(
                 ' '.join([
-                    'INSERT INTO groups ("groupId", "tenantId", "notification", "notificationPlan")',
-                    'VALUES (:groupId, :tenantId, :notification, :notificationPlan);']),
+                    'INSERT INTO groups ("tenantId", "groupId", "notification", "notificationPlan")',
+                    'VALUES (:tenantId, :groupId, :notification, :notificationPlan);']),
                 {'notificationPlan': 'notificationPlan-jkl',
                  'notification': 'notification-ghi',
                  'groupId': 'group-abc',
                  'tenantId': '101010'},
                 1),
              mock.call(
-                 'SELECT * FROM groups WHERE "groupId"=:groupId;',
-                 {'groupId': 'group-abc'},
+                 'SELECT * FROM groups WHERE "tenantId"=:tenantId AND "groupId"=:groupId;',
+                 {'tenantId': '101010', 'groupId': 'group-abc'},
                  1)])
 
 
@@ -149,8 +149,8 @@ class TestGetServersByGroupId(_DBTestCase):
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM servers WHERE "groupId"=:groupId AND "tenantId"=:tenantId;',
-            {'groupId': 'group-def', 'tenantId': '101010'},
+            'SELECT * FROM servers WHERE "groupId"=:groupId;',
+            {'groupId': 'group-def'},
             1)
 
 
@@ -164,20 +164,20 @@ class TestGetServerByServerId(_DBTestCase):
                     'entityId': 'entity-ghi'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_server_by_server_id('101010', 'server-abc')
+        d = cass.get_server_by_server_id('101010', 'group-xyz', 'server-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
         self.client.execute.assert_called_once_with(
-            'SELECT * FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;',
-            {'serverId': 'server-abc', 'tenantId': '101010'},
+            'SELECT * FROM servers WHERE "groupId"=:groupId AND "serverId"=:serverId;',
+            {'serverId': 'server-abc', 'groupId': 'group-xyz'},
             1)
 
     def test_get_server_by_server_id_not_found(self):
         """Raises an error if no server is found."""
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_server_by_server_id('101010', 'server-abc')
+        d = cass.get_server_by_server_id('101010', 'group-xyz', 'server-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ResultNotFoundError))
@@ -186,7 +186,7 @@ class TestGetServerByServerId(_DBTestCase):
         """Raises an error if more than one group is found."""
         self.client.execute.return_value = defer.succeed(['server-abc', 'server-def'])
 
-        d = cass.get_server_by_server_id('101010', 'server-abc')
+        d = cass.get_server_by_server_id('101010', 'group-xyz', 'server-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
@@ -218,16 +218,15 @@ class TestCreateServer(_DBTestCase):
         calls = [
             mock.call(
                 ' '.join([
-                    'INSERT INTO servers ("tenantId", "serverId", "entityId", "groupId")',
-                    'VALUES (:tenantId, :serverId, :entityId, :groupId);']),
+                    'INSERT INTO servers ("serverId", "entityId", "groupId")',
+                    'VALUES (:serverId, :entityId, :groupId);']),
                 {'serverId': 'server-abc',
                  'entityId': 'entity-ghi',
-                 'groupId': 'group-def',
-                 'tenantId':  '101010'},
+                 'groupId': 'group-def'},
                 1),
             mock.call(
-                'SELECT * FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;',
-                {'serverId': 'server-abc', 'tenantId':  '101010'},
+                'SELECT * FROM servers WHERE "groupId"=:groupId AND "serverId"=:serverId;',
+                {'serverId': 'server-abc', 'groupId': 'group-def'},
                 1)]
         self.assertEqual(self.client.execute.mock_calls, calls)
 
@@ -241,16 +240,82 @@ class TestDeleteServer(_DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        d = cass.delete_server('101010', 'server-abc')
+        d = cass.delete_server('101010', 'group-xyz', 'server-abc')
 
         self.successResultOf(d)
 
         calls = [
             mock.call(
-                'DELETE FROM servers WHERE "serverId"=:serverId AND "tenantId"=:tenantId;',
-                {'serverId': 'server-abc', 'tenantId': '101010'}, 1)
+                'DELETE FROM servers WHERE "groupId"=:groupId AND "serverId"=:serverId;',
+                {'serverId': 'server-abc', 'groupId': 'group-xyz'}, 1)
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)
+
+
+class TestGetServerPoliciesByServerId(_DBTestCase):
+    """Test bobby.cass.get_serverpolicies_by_server_id."""
+
+    def test_get_serverpolicies_by_server_id(self):
+        policies = [{'policyId': 'policy-abc'},
+                    {'policyId': 'policy-xyz'}]
+        expected = [{'policyId': 'policy-abc',
+                     'serverId': 'server-abc'},
+                    {'policyId': 'policy-xyz',
+                     'serverId': 'server-abc'}]
+
+        def execute(query, args, consistency):
+            if 'FROM policies' in query:
+                return defer.succeed(policies)
+            else:
+                return defer.succeed(expected)
+        self.client.execute.side_effect = execute
+
+        d = cass.get_serverpolicies_by_server_id('group-abc', 'server-abc')
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+
+        calls = [
+            mock.call('SELECT * FROM policies WHERE "groupId"=:groupId',
+                      {'groupId': 'group-abc'}, 1),
+            mock.call('SELECT * FROM serverpolicies WHERE "policyId" IN (:policies) AND "serverId"=:serverId',
+                      {'serverId': 'server-abc',
+                       'policies': 'policy-abc, policy-xyz'},
+                      1)
+        ]
+        self.assertEqual(self.client.execute.mock_calls, calls)
+
+
+class TestAddServerpolicy(_DBTestCase):
+    """Test bobby.cass.add_serverpolicy"""
+
+    def test_add_serverpolicy(self):
+        """Adding a server policy is an insert in the database."""
+        self.client.execute.return_value = defer.succeed(None)
+
+        d = cass.add_serverpolicy('server-abc', 'policy-def')
+
+        self.successResultOf(d)
+        self.client.execute.assert_called_once_with(
+            'INSERT INTO serverpolicies ("serverId", "policyId") VALUES (:serverId, :policyId);',
+            {'serverId': 'server-abc', 'policyId': 'policy-def'},
+            1)
+
+
+class TestDeleteServerpolicy(_DBTestCase):
+    """Test bobby.cass.delete_serverpolicy"""
+
+    def test_delete_serverpolicy(self):
+        """Deleting a server policy is a delete in the database."""
+        self.client.execute.return_value = defer.succeed(None)
+
+        d = cass.delete_serverpolicy('server-abc', 'policy-def')
+
+        self.successResultOf(d)
+        self.client.execute.assert_called_once_with(
+            'DELETE FROM serverpolicies WHERE "serverId"=:serverId AND "policyId"=:policyId;',
+            {'serverId': 'server-abc', 'policyId': 'policy-def'},
+            1)
 
 
 class TestGetPoliciesByGroupId(_DBTestCase):
@@ -369,14 +434,14 @@ class TestDeletePolicy(_DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        d = cass.delete_policy('policy-abc')
+        d = cass.delete_policy('group-xyz', 'policy-abc')
 
         self.successResultOf(d)
 
         calls = [
             mock.call(
-                'DELETE FROM policies WHERE "policyId"=:policyId;',
-                {'policyId': 'policy-abc'}, 1),
+                'DELETE FROM policies WHERE "groupId"=:groupId AND "policyId"=:policyId;',
+                {'policyId': 'policy-abc', 'groupId': 'group-xyz'}, 1),
         ]
         self.assertEqual(calls, self.client.execute.mock_calls)
 
