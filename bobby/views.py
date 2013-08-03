@@ -217,7 +217,8 @@ def delete_server(request, log, tenant_id, group_id, server_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>/serverPolicies',
            methods=['GET'])
-def get_serverpolicies(request, tenant_id, group_id, server_id):
+@with_transaction_id()
+def get_serverpolicies(request, log, tenant_id, group_id, server_id):
     """Get all serverpolicies owned by a given server_id.
 
     :param str tenant_id: A tenant id.
@@ -237,7 +238,8 @@ def get_serverpolicies(request, tenant_id, group_id, server_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>/serverPolicies',
            methods=['POST'])
-def create_serverpolicies(request, tenant_id, group_id, server_id):
+@with_transaction_id()
+def create_serverpolicies(request, log, tenant_id, group_id, server_id):
     """Create serverpolicies based on the list of policies provided.
 
     :param str tenant_id: A tenant id.
@@ -260,7 +262,8 @@ def create_serverpolicies(request, tenant_id, group_id, server_id):
 
 @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>/serverPolicies',
            methods=['DELETE'])
-def delete_serverpolicies(request, tenant_id, group_id, server_id):
+@with_transaction_id()
+def delete_serverpolicies(request, log, tenant_id, group_id, server_id):
     """Delete serverpolicies based on the list of policies provided.
 
     :param str tenant_id: A tenant id.
