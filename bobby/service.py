@@ -11,23 +11,31 @@ from bobby.views import app
 
 class Options(usage.Options):
     """
-    Currently unused.
     """
+    optParameters = [
+        ["port", "p", 9876,
+         "The bobby port for API connections."],
+        ["cql-host", "h", "localhost",
+         "The CQL host for client communications."],
+        ["cql-port", "c", 9160,
+         "The CQL port for client communications."]]
 
 
-def setUpCQLClient():
+def setUpCQLClient(options):
     client = CQLClient(
         endpoints.clientFromString(
             reactor,
-            "tcp:{0}:{1}".format('localhost', 9160)),
+            "tcp:{0}:{1}".format(options["cql-host"], options["cql-port"])),
         'bobby')
     cass.set_client(client)
 
 
 def makeService(options):
-    setUpCQLClient()
+    setUpCQLClient(options)
     application = service.Application("Dammit, Bobby!")
     services = service.IServiceCollection(application)
-    bobbyServer = strports.service('tcp:9876', server.Site(app.resource()))
+    bobbyServer = strports.service(
+        'tcp:{0}'.format(options["port"]),
+        server.Site(app.resource()))
     bobbyServer.setServiceParent(application)
     return services
