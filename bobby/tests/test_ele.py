@@ -27,3 +27,21 @@ class TestEleApi(unittest.TestCase):
     def test_fetch_entity_by_uuid(self):
         """ Test fetch_entity_by_uuid """
         ele.fetch_entity_by_uuid('t1', 'p1', 's1')
+
+
+class TestMaasClient(unittest.TestCase):
+    """Test bobby.ele.MaasClient."""
+
+    def test_init(self):
+        public_url = u'https://monitoring.api.rackspacecloud.com/v1.0/123'
+        auth_token = u'auth-abcdef'
+        service_catalog = [
+            {u'endpoints': [{
+                u'publicURL': public_url,
+                u'tenantId': u'675646'}],
+             u'name': u'cloudMonitoring',
+             u'type': u'rax:monitor'}]
+        client = ele.MaasClient(service_catalog, auth_token)
+
+        self.assertEqual(public_url, client._endpoint)
+        self.assertEqual(auth_token, auth_token)

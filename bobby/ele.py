@@ -47,3 +47,17 @@ def add_notification_plan(tenant_id, notification):
 def fetch_entity_by_uuid(tenant_id, policy_id, server_id):
     """ Fetch an entity by the UUID """
     pass
+
+
+class MaasClient(object):
+    """A web client for making requests to MaaS."""
+
+    SERVICE_NAME = 'cloudMonitoring'
+
+    def __init__(self, service_catalog, auth_token):
+        # MaaS doesn't have regions.
+        for service in service_catalog:
+            if self.SERVICE_NAME == service['name']:
+                self._endpoint = service['endpoints'][0]['publicURL']
+                break
+        self._auth_token = auth_token
