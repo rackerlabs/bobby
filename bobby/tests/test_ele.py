@@ -97,4 +97,32 @@ class TestMaasClient(unittest.TestCase):
                      '"label": "Auto Scale Notification Plan"}'
             )
         ]
-        self.assertEqual(treq.post.mock_calls, calls)
+        self.assertEqual(calls, treq.post.mock_calls)
+
+    @mock.patch('bobby.ele.treq')
+    def test_remove_notification_and_plan(self, treq):
+        def delete(url, headers):
+            response = mock.Mock()
+            response.code = 204
+            return defer.succeed(response)
+        treq.delete.side_effect = delete
+
+        d = self.client.remove_notification_and_plan(
+            'notificationPlan-xyz', 'notification-abc')
+        self.successResultOf(d)
+
+        calls = [
+            mock.call(
+                'https://monitoring.api.rackspacecloud.com/v1.0/101010/'
+                'notification_plans/notificationPlan-xyz',
+                headers={'content-type': ['application/json'],
+                         'accept': ['application/json'],
+                         'x-auth-token': ['auth-abc']}),
+            mock.call(
+                'https://monitoring.api.rackspacecloud.com/v1.0/101010/'
+                'notifications/notification-abc',
+                headers={'content-type': ['application/json'],
+                         'accept': ['application/json'],
+                         'x-auth-token': ['auth-abc']})
+        ]
+        self.assertEqual(calls, treq.delete.mock_calls)

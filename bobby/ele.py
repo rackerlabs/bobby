@@ -110,3 +110,20 @@ Scale.
             notification_plan_id = result.headers.getRawHeaders('x-object-id')[0]
             return defer.succeed((notification_id[0], notification_plan_id))
         return d.addCallback(return_ids)
+
+    def remove_notification_and_plan(self, notification_plan_id, notification_id):
+        """Delete a notification plan and notification id."""
+        notification_plan_url = http.append_segments(
+            self._endpoint, 'notification_plans', notification_plan_id)
+        d = treq.delete(notification_plan_url,
+                        headers=http.headers(self._auth_token))
+        d.addCallback(http.check_success, [204])
+
+        def delete_notification(_):
+            notification_url = http.append_segments(
+                self._endpoint, 'notifications', notification_id)
+            return treq.delete(notification_url,
+                               headers=http.headers(self._auth_token))
+        d.addCallback(delete_notification)
+        d.addCallback(http.check_success, [204])
+        return d
