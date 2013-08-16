@@ -68,16 +68,12 @@ def add_policy_to_server(tenant_id, policy_id, server_id, entity_id, check_templ
     maas_client = ele.MaasClient({}, 'abc')
     d = maas_client.add_check(policy_id, entity_id, check_template)
 
-    # TODO: still to be ported...
     def add_alarm(check):
-        d = ele.add_alarm(tenant_id, policy_id, entity_id, check['id'],
-                          alarm_template, nplan_id)
-        d.addCallback(lambda alarm_id: (check['id'], alarm_id))
-        return d
+        d = maas_client.add_alarm(policy_id, entity_id, nplan_id, check['id'], alarm_template)
+        return d.addCallback(lambda alarm: (check['id'], alarm['id']))
     d.addCallback(add_alarm)
 
-    def register_policy(res):
-        check_id, alarm_id = res
-        cass.register_policy_on_server(policy_id, server_id, alarm_id, check_id)
+    def register_policy((check_id, alarm_id)):
+        return cass.register_policy_on_server(policy_id, server_id, alarm_id, check_id)
     d.addCallback(register_policy)
     return d

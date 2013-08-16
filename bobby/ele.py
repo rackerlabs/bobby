@@ -27,16 +27,6 @@ import treq
 from twisted.internet import defer
 
 
-def add_check(tenant_id, policy_id, entity_id, check_template):
-    """ Add a check to the MaaS system """
-    return defer.fail(None)
-
-
-def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id):
-    """ Add an alarm to the MaaS system """
-    return defer.succeed('al')
-
-
 def fetch_entity_by_uuid(tenant_id, policy_id, server_id):
     """ Fetch an entity by the UUID """
     pass

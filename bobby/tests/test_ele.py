@@ -11,10 +11,6 @@ from bobby import ele
 class TestEleApi(unittest.TestCase):
     """ Test ELE API calls """
 
-    def test_add_alarm(self):
-        """ Test add_alarm """
-        ele.add_alarm('t1', 'p1', 'en1', 'ch1', 'ALARM DSL', 'np')
-
     def test_fetch_entity_by_uuid(self):
         """ Test fetch_entity_by_uuid """
         ele.fetch_entity_by_uuid('t1', 'p1', 's1')
