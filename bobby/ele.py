@@ -37,16 +37,6 @@ def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_i
     return defer.succeed('al')
 
 
-def add_notification(tenant_id):
-    """ Add a notification to the MaaS system """
-    return defer.succeed('nt')
-
-
-def add_notification_plan(tenant_id, notification):
-    """ Add a notification plan to the MaaS system """
-    return defer.succeed('np')
-
-
 def fetch_entity_by_uuid(tenant_id, policy_id, server_id):
     """ Fetch an entity by the UUID """
     pass

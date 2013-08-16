@@ -36,21 +36,13 @@ def apply_policies_to_server(tenant_id, group_id, server_id, entity_id, nplan_id
 
 def create_group(tenant_id, group_id):
     """ Create a group """
-    d = ele.add_notification(tenant_id)
+    # TODO: get the service catalog and auth token
+    maas_client = ele.MaasClient({}, 'abc')
+    d = maas_client.add_notification_and_plan()
 
-    def post_add_notification(notification_id):
-        d = ele.add_notification_plan(tenant_id, notification_id)
-        d.addCallback(lambda nplan_id: (notification_id, nplan_id))
-        return d
-    d.addCallback(post_add_notification)
-
-    def create_group(results):
-        notification_id, nplan_id = results
-        d = cass.create_group(group_id, tenant_id, notification_id, nplan_id)
-        return d
-
-    d.addCallback(create_group)
-    return d
+    def create_group((notification_id, notification_plan_id)):
+        return cass.create_group(group_id, tenant_id, notification_id, notification_plan_id)
+    return d.addCallback(create_group)
 
 
 def apply_policy(tenant_id, group_id, policy_id, check_template, alarm_template, nplan_id):
