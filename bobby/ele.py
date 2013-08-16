@@ -154,3 +154,10 @@ Scale.
         d.addCallback(get_alarm)
         d.addCallback(http.check_success, [200])
         return d.addCallback(treq.json_content)
+
+    def remove_alarm(self, entity_id, alarm_id):
+        """Remove an alarm."""
+        d = treq.delete(http.append_segments(
+            self._endpoint, 'entities', entity_id, 'alarms', alarm_id),
+            headers=http.headers(self._auth_token))
+        return d.addCallback(http.check_success, [204])

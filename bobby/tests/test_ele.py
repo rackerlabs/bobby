@@ -219,3 +219,21 @@ class TestMaasClient(unittest.TestCase):
             headers={'content-type': ['application/json'],
                      'accept': ['application/json'],
                      'x-auth-token': ['auth-abc']})
+
+    @mock.patch('bobby.ele.treq')
+    def test_remove_alarm(self, treq):
+        def delete(url, headers):
+            response = mock.Mock()
+            response.code = 204
+            return defer.succeed(response)
+        treq.delete.side_effect = delete
+
+        d = self.client.remove_alarm('entity-abc', 'alarm-xyz')
+        self.successResultOf(d)
+
+        treq.delete.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010'
+            '/entities/entity-abc/alarms/alarm-xyz',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})
