@@ -27,16 +27,6 @@ import treq
 from twisted.internet import defer
 
 
-def add_check(tenant_id, policy_id, entity_id, check_template):
-    """ Add a check to the MaaS system """
-    return defer.fail(None)
-
-
-def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id):
-    """ Add an alarm to the MaaS system """
-    return defer.succeed('al')
-
-
 def fetch_entity_by_uuid(tenant_id, policy_id, server_id):
     """ Fetch an entity by the UUID """
     pass
@@ -138,5 +128,27 @@ Scale.
         """Remove a check."""
         d = treq.delete(http.append_segments(
             self._endpoint, 'entities', entity_id, 'checks', check_id),
+            headers=http.headers(self._auth_token))
+        return d.addCallback(http.check_success, [204])
+
+    def add_alarm(self, policy_id, entity_id, notification_plan_id, check_id, alarm_template):
+        """Add an alarm."""
+        d = treq.post(
+            http.append_segments(self._endpoint, 'entities', entity_id, 'alarms'),
+            headers=http.headers(self._auth_token),
+            data=json.dumps(alarm_template))
+        d.addCallback(http.check_success, [201])
+
+        def get_alarm(result):
+            location = result.headers.getRawHeaders('Location')[0]
+            return treq.get(location, headers=http.headers(self._auth_token))
+        d.addCallback(get_alarm)
+        d.addCallback(http.check_success, [200])
+        return d.addCallback(treq.json_content)
+
+    def remove_alarm(self, entity_id, alarm_id):
+        """Remove an alarm."""
+        d = treq.delete(http.append_segments(
+            self._endpoint, 'entities', entity_id, 'alarms', alarm_id),
             headers=http.headers(self._auth_token))
         return d.addCallback(http.check_success, [204])

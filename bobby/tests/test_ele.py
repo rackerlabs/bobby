@@ -11,10 +11,6 @@ from bobby import ele
 class TestEleApi(unittest.TestCase):
     """ Test ELE API calls """
 
-    def test_add_alarm(self):
-        """ Test add_alarm """
-        ele.add_alarm('t1', 'p1', 'en1', 'ch1', 'ALARM DSL', 'np')
-
     def test_fetch_entity_by_uuid(self):
         """ Test fetch_entity_by_uuid """
         ele.fetch_entity_by_uuid('t1', 'p1', 's1')
@@ -181,6 +177,59 @@ class TestMaasClient(unittest.TestCase):
         treq.delete.assert_called_once_with(
             'https://monitoring.api.rackspacecloud.com/v1.0/101010'
             '/entities/entity-abc/checks/check-xyz',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})
+
+    @mock.patch('bobby.ele.treq')
+    def test_add_alarm(self, treq):
+        def post(*args, **kwargs):
+            response = mock.Mock()
+            response.code = 201
+            response.headers.getRawHeaders.return_value = ['http://example.com']
+            return defer.succeed(response)
+        treq.post.side_effect = post
+
+        def get(*args, **kwargs):
+            response = mock.Mock()
+            response.code = 200
+            return defer.succeed(response)
+        treq.get.side_effect = get
+        alarm_template = 'if (metric[\"duration\"] >= 2) {' \
+            'return new AlarmStatus(OK); }' \
+            'return new AlarmStatus(CRITICAL);'
+
+        d = self.client.add_alarm('policy-abc', 'entity-def', 'plan-ghi',
+                                  'check-jkl', alarm_template)
+        self.successResultOf(d)
+
+        treq.post.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010/'
+            'entities/entity-def/alarms',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']},
+            data='"if (metric[\\"duration\\"] >= 2) {return new AlarmStatus(OK); }return new AlarmStatus(CRITICAL);"')
+        treq.get.assert_called_once_with(
+            'http://example.com',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})
+
+    @mock.patch('bobby.ele.treq')
+    def test_remove_alarm(self, treq):
+        def delete(url, headers):
+            response = mock.Mock()
+            response.code = 204
+            return defer.succeed(response)
+        treq.delete.side_effect = delete
+
+        d = self.client.remove_alarm('entity-abc', 'alarm-xyz')
+        self.successResultOf(d)
+
+        treq.delete.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010'
+            '/entities/entity-abc/alarms/alarm-xyz',
             headers={'content-type': ['application/json'],
                      'accept': ['application/json'],
                      'x-auth-token': ['auth-abc']})
