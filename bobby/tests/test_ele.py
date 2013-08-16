@@ -11,10 +11,6 @@ from bobby import ele
 class TestEleApi(unittest.TestCase):
     """ Test ELE API calls """
 
-    def test_add_check(self):
-        """ Test add_check """
-        ele.add_check('t1', 'p1', 'en1', {})
-
     def test_add_alarm(self):
         """ Test add_alarm """
         ele.add_alarm('t1', 'p1', 'en1', 'ch1', 'ALARM DSL', 'np')
@@ -126,8 +122,16 @@ class TestMaasClient(unittest.TestCase):
         def post(url, headers, data=None):
             response = mock.Mock()
             response.code = 201
+            response.headers.getRawHeaders.return_value = ['http://example.com']
             return defer.succeed(response)
         treq.post.side_effect = post
+
+        def get(url, headers):
+            response = mock.Mock()
+            response.code = 200
+            return defer.succeed(response)
+        treq.get.side_effect = get
+
         check_template = json.dumps({
             'label': 'Monitoring check',
             'type': 'remote.http',
@@ -157,6 +161,11 @@ class TestMaasClient(unittest.TestCase):
                  '"details": {"url": "http://www.example.com/", "method": "GET"}, '
                  '"timeout": 30, "monitoring_zones_poll": ["mzA"], '
                  '"type": "remote.http"}')
+        treq.get.assert_called_once_with(
+            'http://example.com',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})
 
     @mock.patch('bobby.ele.treq')
     def test_remove_check(self, treq):
