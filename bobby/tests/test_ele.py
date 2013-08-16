@@ -82,11 +82,11 @@ class TestMaasClient(unittest.TestCase):
                 headers={'content-type': ['application/json'],
                          'accept': ['application/json'],
                          'x-auth-token': ['auth-abc']},
+
                 data='{"ok_state": ["notification-abc"], '
+                     '"warning_state": ["notification-abc"], '
                      '"critical_state": ["notification-abc"], '
-                     '"label": "Auto Scale Notification Plan"}'
-            )
-        ]
+                     '"label": "Auto Scale Notification Plan"}')]
         self.assertEqual(calls, treq.post.mock_calls)
 
     @mock.patch('bobby.ele.treq')

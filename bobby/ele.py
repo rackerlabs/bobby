@@ -86,7 +86,8 @@ Scale.
             notification_plan_data = {
                 'label': 'Auto Scale Notification Plan',
                 'critical_state': [not_id],
-                'ok_state': [not_id]
+                'ok_state': [not_id],
+                'warning_state': [not_id]
             }
             notification_plan_url = http.append_segments(
                 self._endpoint, 'notification_plans')
