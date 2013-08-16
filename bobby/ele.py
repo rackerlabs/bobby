@@ -126,3 +126,10 @@ Scale.
             data=check_template)
         d.addCallback(http.check_success, [201])
         return d.addCallback(treq.json_content)
+
+    def remove_check(self, entity_id, check_id):
+        """Remove a check."""
+        d = treq.delete(http.append_segments(
+            self._endpoint, 'entities', entity_id, 'checks', check_id),
+            headers=http.headers(self._auth_token))
+        return d.addCallback(http.check_success, [204])
