@@ -184,3 +184,38 @@ class TestMaasClient(unittest.TestCase):
             headers={'content-type': ['application/json'],
                      'accept': ['application/json'],
                      'x-auth-token': ['auth-abc']})
+
+    @mock.patch('bobby.ele.treq')
+    def test_add_alarm(self, treq):
+        def post(*args, **kwargs):
+            response = mock.Mock()
+            response.code = 201
+            response.headers.getRawHeaders.return_value = ['http://example.com']
+            return defer.succeed(response)
+        treq.post.side_effect = post
+
+        def get(*args, **kwargs):
+            response = mock.Mock()
+            response.code = 200
+            return defer.succeed(response)
+        treq.get.side_effect = get
+        alarm_template = 'if (metric[\"duration\"] >= 2) {' \
+            'return new AlarmStatus(OK); }' \
+            'return new AlarmStatus(CRITICAL);'
+
+        d = self.client.add_alarm('policy-abc', 'entity-def', 'plan-ghi',
+                                  'check-jkl', alarm_template)
+        self.successResultOf(d)
+
+        treq.post.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010/'
+            'entities/entity-def/alarms',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']},
+            data='"if (metric[\\"duration\\"] >= 2) {return new AlarmStatus(OK); }return new AlarmStatus(CRITICAL);"')
+        treq.get.assert_called_once_with(
+            'http://example.com',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})

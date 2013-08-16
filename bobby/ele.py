@@ -139,3 +139,18 @@ Scale.
             self._endpoint, 'entities', entity_id, 'checks', check_id),
             headers=http.headers(self._auth_token))
         return d.addCallback(http.check_success, [204])
+
+    def add_alarm(self, policy_id, entity_id, notification_plan_id, check_id, alarm_template):
+        """Add an alarm."""
+        d = treq.post(
+            http.append_segments(self._endpoint, 'entities', entity_id, 'alarms'),
+            headers=http.headers(self._auth_token),
+            data=json.dumps(alarm_template))
+        d.addCallback(http.check_success, [201])
+
+        def get_alarm(result):
+            location = result.headers.getRawHeaders('Location')[0]
+            return treq.get(location, headers=http.headers(self._auth_token))
+        d.addCallback(get_alarm)
+        d.addCallback(http.check_success, [200])
+        return d.addCallback(treq.json_content)
