@@ -20,7 +20,10 @@ So we make do with what we can.
 And thus, we reach this piece of code, which is a super-lightweight facade for
 the calls we'll make against MaaS.
 """
+import json
 
+from otter.util import http
+import treq
 from twisted.internet import defer
 
 
@@ -61,3 +64,49 @@ class MaasClient(object):
                 self._endpoint = service['endpoints'][0]['publicURL']
                 break
         self._auth_token = auth_token
+
+    def add_notification_and_plan(self):
+        """Groups must have a Notification and Notification plan for Auto
+Scale.
+
+        This should only have to be created for each group, and the ids should
+        be stored in the database.
+        """
+        notification_id = []
+
+        # TODO: Finish this path to the webhook
+        notification_data = {
+            'label': 'Auto Scale Webhook Notification',
+            'type': 'webhook',
+            'details': {
+                'url': '/alarm'
+            }
+        }
+        notification_url = http.append_segments(self._endpoint, 'notifications')
+        d = treq.post(notification_url,
+                      headers=http.headers(self._auth_token),
+                      data=json.dumps(notification_data))
+        d.addCallback(http.check_success, [201])
+
+        # Get the newly created notification
+        def create_notification_plan(result):
+            not_id = result.headers.getRawHeaders('x-object-id')[0]
+            notification_id.append(not_id)
+
+            notification_plan_data = {
+                'label': 'Auto Scale Notification Plan',
+                'critical_state': [not_id],
+                'ok_state': [not_id]
+            }
+            notification_plan_url = http.append_segments(
+                self._endpoint, 'notification_plans')
+            return treq.post(notification_plan_url,
+                             headers=http.headers(self._auth_token),
+                             data=json.dumps(notification_plan_data))
+        d.addCallback(create_notification_plan)
+        d.addCallback(http.check_success, [201])
+
+        def return_ids(result):
+            notification_plan_id = result.headers.getRawHeaders('x-object-id')[0]
+            return defer.succeed((notification_id[0], notification_plan_id))
+        return d.addCallback(return_ids)
