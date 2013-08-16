@@ -117,3 +117,12 @@ Scale.
         d.addCallback(delete_notification)
         d.addCallback(http.check_success, [204])
         return d
+
+    def add_check(self, policy_id, entity_id, check_template):
+        """Add a new check to the entity."""
+        d = treq.post(
+            http.append_segments(self._endpoint, 'entities', entity_id, 'checks'),
+            headers=http.headers(self._auth_token),
+            data=check_template)
+        d.addCallback(http.check_success, [201])
+        return d.addCallback(treq.json_content)

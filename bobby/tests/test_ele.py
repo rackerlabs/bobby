@@ -1,4 +1,6 @@
 """Tests for bobby.worker."""
+import json
+
 import mock
 from twisted.internet import defer
 from twisted.trial import unittest
@@ -118,3 +120,40 @@ class TestMaasClient(unittest.TestCase):
                          'x-auth-token': ['auth-abc']})
         ]
         self.assertEqual(calls, treq.delete.mock_calls)
+
+    @mock.patch('bobby.ele.treq')
+    def test_add_check(self, treq):
+        def post(url, headers, data=None):
+            response = mock.Mock()
+            response.code = 201
+            return defer.succeed(response)
+        treq.post.side_effect = post
+        check_template = json.dumps({
+            'label': 'Monitoring check',
+            'type': 'remote.http',
+            'details': {
+                'url': 'http://www.example.com/',
+                'method': 'GET'
+            },
+            'monitoring_zones_poll': [
+                'mzA'
+            ],
+            'timeout': 30,
+            'period': 100,
+            'target_alias': 'default'
+        })
+
+        d = self.client.add_check('policy-abc', 'entity-def', check_template)
+        self.successResultOf(d)
+
+        treq.post.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010'
+            '/entities/entity-def/checks',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']},
+            data='{"target_alias": "default", "period": 100, '
+                 '"label": "Monitoring check", '
+                 '"details": {"url": "http://www.example.com/", "method": "GET"}, '
+                 '"timeout": 30, "monitoring_zones_poll": ["mzA"], '
+                 '"type": "remote.http"}')
