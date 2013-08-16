@@ -1,4 +1,6 @@
 """Tests for bobby.worker."""
+import json
+
 import mock
 from twisted.internet import defer
 from twisted.trial import unittest
@@ -8,10 +10,6 @@ from bobby import ele
 
 class TestEleApi(unittest.TestCase):
     """ Test ELE API calls """
-
-    def test_add_check(self):
-        """ Test add_check """
-        ele.add_check('t1', 'p1', 'en1', {})
 
     def test_add_alarm(self):
         """ Test add_alarm """
@@ -118,3 +116,71 @@ class TestMaasClient(unittest.TestCase):
                          'x-auth-token': ['auth-abc']})
         ]
         self.assertEqual(calls, treq.delete.mock_calls)
+
+    @mock.patch('bobby.ele.treq')
+    def test_add_check(self, treq):
+        def post(url, headers, data=None):
+            response = mock.Mock()
+            response.code = 201
+            response.headers.getRawHeaders.return_value = ['http://example.com']
+            return defer.succeed(response)
+        treq.post.side_effect = post
+
+        def get(url, headers):
+            response = mock.Mock()
+            response.code = 200
+            return defer.succeed(response)
+        treq.get.side_effect = get
+
+        check_template = json.dumps({
+            'label': 'Monitoring check',
+            'type': 'remote.http',
+            'details': {
+                'url': 'http://www.example.com/',
+                'method': 'GET'
+            },
+            'monitoring_zones_poll': [
+                'mzA'
+            ],
+            'timeout': 30,
+            'period': 100,
+            'target_alias': 'default'
+        })
+
+        d = self.client.add_check('policy-abc', 'entity-def', check_template)
+        self.successResultOf(d)
+
+        treq.post.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010'
+            '/entities/entity-def/checks',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']},
+            data='{"target_alias": "default", "period": 100, '
+                 '"label": "Monitoring check", '
+                 '"details": {"url": "http://www.example.com/", "method": "GET"}, '
+                 '"timeout": 30, "monitoring_zones_poll": ["mzA"], '
+                 '"type": "remote.http"}')
+        treq.get.assert_called_once_with(
+            'http://example.com',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})
+
+    @mock.patch('bobby.ele.treq')
+    def test_remove_check(self, treq):
+        def delete(url, headers):
+            response = mock.Mock()
+            response.code = 204
+            return defer.succeed(response)
+        treq.delete.side_effect = delete
+
+        d = self.client.remove_check('entity-abc', 'check-xyz')
+        self.successResultOf(d)
+
+        treq.delete.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010'
+            '/entities/entity-abc/checks/check-xyz',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']})

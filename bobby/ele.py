@@ -29,7 +29,7 @@ from twisted.internet import defer
 
 def add_check(tenant_id, policy_id, entity_id, check_template):
     """ Add a check to the MaaS system """
-    return defer.succeed('ch')
+    return defer.fail(None)
 
 
 def add_alarm(tenant_id, policy_id, entity_id, check_id, alarm_template, nplan_id):
@@ -118,3 +118,25 @@ Scale.
         d.addCallback(delete_notification)
         d.addCallback(http.check_success, [204])
         return d
+
+    def add_check(self, policy_id, entity_id, check_template):
+        """Add a new check to the entity."""
+        d = treq.post(
+            http.append_segments(self._endpoint, 'entities', entity_id, 'checks'),
+            headers=http.headers(self._auth_token),
+            data=check_template)
+        d.addCallback(http.check_success, [201])
+
+        def get_check(result):
+            location = result.headers.getRawHeaders('Location')[0]
+            return treq.get(location, headers=http.headers(self._auth_token))
+        d.addCallback(get_check)
+        d.addCallback(http.check_success, [200])
+        return d.addCallback(treq.json_content)
+
+    def remove_check(self, entity_id, check_id):
+        """Remove a check."""
+        d = treq.delete(http.append_segments(
+            self._endpoint, 'entities', entity_id, 'checks', check_id),
+            headers=http.headers(self._auth_token))
+        return d.addCallback(http.check_success, [204])
