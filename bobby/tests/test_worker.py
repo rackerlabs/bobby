@@ -5,7 +5,8 @@ from twisted.internet import defer
 from twisted.trial import unittest
 from silverberg.client import CQLClient
 
-from bobby import worker, cass
+from bobby import cass, worker
+from bobby.ele import MaasClient
 
 
 class _WorkerTestCase(unittest.TestCase):
@@ -65,10 +66,17 @@ class TestAddPolicyToServer(_WorkerTestCase):
 
 class TestCreateGroup(_WorkerTestCase):
     """ Test that we can add a policy to a server """
-    @mock.patch('bobby.worker.ele.add_notification')
-    @mock.patch('bobby.worker.ele.add_notification_plan')
-    def test_create_group(self, mock_add_notification_plan, mock_add_notification):
+
+    @mock.patch('bobby.worker.ele.MaasClient')
+    def test_create_group(self, FakeMaasClient):
         """ Basic success case """
+        maas_client = mock.create_autospec(MaasClient)
+        maas_client._endpoint = 'http://0.0.0.0/'
+        maas_client._auth_token = 'auth-xyz'
+        maas_client.add_notification_and_plan.return_value = defer.succeed(
+            ('notification-xyz', 'notificationPlan-abc'))
+        FakeMaasClient.return_value = maas_client
+
         expected = {'groupId': 'g1',
                     'tenantId': '101010',
                     'notification': 'ntBlah',
@@ -81,16 +89,27 @@ class TestCreateGroup(_WorkerTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        mock_add_notification.return_value = defer.succeed('ntBlah')
-        mock_add_notification_plan.return_value = defer.succeed('npBlah')
-
         d = worker.create_group('101010', 'g1')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
 
-        mock_add_notification.assert_called_once_with('101010')
-        mock_add_notification_plan.assert_called_once_with('101010', 'ntBlah')
+        maas_client.add_notification_and_plan.assert_called_once_with()
+        calls = [
+            mock.call(
+                'INSERT INTO groups ("tenantId", "groupId", "notification", '
+                '"notificationPlan") VALUES (:tenantId, :groupId, '
+                ':notification, :notificationPlan);',
+                {'notificationPlan': 'notificationPlan-abc',
+                 'notification': 'notification-xyz',
+                 'groupId': '101010',
+                 'tenantId': 'g1'},
+                1),
+            mock.call(
+                'SELECT * FROM groups WHERE "tenantId"=:tenantId AND '
+                '"groupId"=:groupId;',
+                {'groupId': '101010', 'tenantId': 'g1'}, 1)]
+        self.assertEqual(self.client.execute.mock_calls, calls)
 
 
 class TestAddServer(_WorkerTestCase):
