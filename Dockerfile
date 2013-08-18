@@ -17,4 +17,4 @@ RUN cd /opt/bobby; make test
 
 # Expose the bobby port and set a default command
 EXPOSE 9876
-CMD /bin/bash -c "cd /opt/bobby; twistd -n bobby"
+CMD /bin/bash -c "cd /opt/bobby; twistd -l /var/log/bobby/logs -n bobby"
