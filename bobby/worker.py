@@ -5,6 +5,9 @@ Functions for actually doing things
 from twisted.internet import defer
 from bobby import ele, cass
 
+# TODO: It's probably best to make this a class, and rather than constantly
+# specifying the db reference every time, make it a instance attribute.
+
 
 def create_server_entity(tenant_id, policy_id, server_id):
     """ Creates a server's entity in MaaS """
@@ -13,13 +16,13 @@ def create_server_entity(tenant_id, policy_id, server_id):
     return defer.succeed(None)
 
 
-def apply_policies_to_server(tenant_id, group_id, server_id, entity_id, nplan_id):
+def apply_policies_to_server(db, tenant_id, group_id, server_id, entity_id, nplan_id):
     """ Apply policies to a new server """
-    d = cass.get_policies_by_group_id(group_id)
+    d = cass.get_policies_by_group_id(db, group_id)
 
     def proc_policies(policies):
         deferreds = [
-            add_policy_to_server(tenant_id, policy['policyId'], server_id, entity_id,
+            add_policy_to_server(db, tenant_id, policy['policyId'], server_id, entity_id,
                                  policy['checkTemplate'], policy['alarmTemplate'], nplan_id)
             for policy in policies
         ]
@@ -34,24 +37,24 @@ def apply_policies_to_server(tenant_id, group_id, server_id, entity_id, nplan_id
 #   pass
 
 
-def create_group(tenant_id, group_id):
+def create_group(db, tenant_id, group_id):
     """ Create a group """
     # TODO: get the service catalog and auth token
     maas_client = ele.MaasClient({}, 'abc')
     d = maas_client.add_notification_and_plan()
 
     def create_group((notification_id, notification_plan_id)):
-        return cass.create_group(group_id, tenant_id, notification_id, notification_plan_id)
+        return cass.create_group(db, group_id, tenant_id, notification_id, notification_plan_id)
     return d.addCallback(create_group)
 
 
-def apply_policy(tenant_id, group_id, policy_id, check_template, alarm_template, nplan_id):
+def apply_policy(db, tenant_id, group_id, policy_id, check_template, alarm_template, nplan_id):
     """Apply a new policy accross a group of servers"""
-    d = cass.get_servers_by_group_id(tenant_id, group_id)
+    d = cass.get_servers_by_group_id(db, tenant_id, group_id)
 
     def proc_servers(servers):
         deferreds = [
-            add_policy_to_server(tenant_id, policy_id, server['serverId'], server['entityId'],
+            add_policy_to_server(db, tenant_id, policy_id, server['serverId'], server['entityId'],
                                  check_template, alarm_template, nplan_id)
             for server in servers
         ]
@@ -61,7 +64,7 @@ def apply_policy(tenant_id, group_id, policy_id, check_template, alarm_template,
     return d
 
 
-def add_policy_to_server(tenant_id, policy_id, server_id, entity_id, check_template, alarm_template,
+def add_policy_to_server(db, tenant_id, policy_id, server_id, entity_id, check_template, alarm_template,
                          nplan_id):
     """Adds a single policy to a server"""
     # TODO: get the service catalog and auth token
@@ -74,6 +77,6 @@ def add_policy_to_server(tenant_id, policy_id, server_id, entity_id, check_templ
     d.addCallback(add_alarm)
 
     def register_policy((check_id, alarm_id)):
-        return cass.register_policy_on_server(policy_id, server_id, alarm_id, check_id)
+        return cass.register_policy_on_server(db, policy_id, server_id, alarm_id, check_id)
     d.addCallback(register_policy)
     return d

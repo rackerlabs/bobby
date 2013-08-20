@@ -39,6 +39,9 @@ class Bobby(object):
 
     app = Klein()
 
+    def __init__(self, db):
+        self._db = db
+
     @app.route('/<string:tenant_id>/groups', methods=['GET'])
     @with_transaction_id()
     def get_groups(self, request, log, tenant_id):
@@ -46,7 +49,7 @@ class Bobby(object):
 
         :param str tenant_id: A tenant id
         """
-        d = cass.get_groups_by_tenant_id(tenant_id)
+        d = cass.get_groups_by_tenant_id(self._db, tenant_id)
 
         def _return_result(groups):
             result = {'groups': groups}
@@ -69,7 +72,7 @@ class Bobby(object):
         notification = content.get('notification')
         notification_plan = content.get('notificationPlan')
 
-        d = cass.create_group(tenant_id, group_id, notification, notification_plan)
+        d = cass.create_group(self._db, tenant_id, group_id, notification, notification_plan)
 
         def _serialize_object(group):
             # XXX: the actual way to do this is using a json encoder. Not now.
@@ -97,7 +100,7 @@ class Bobby(object):
         :param str tenant_id: A tenant id
         :param str group_id: A group id.
         """
-        d = cass.get_group_by_id(tenant_id, group_id)
+        d = cass.get_group_by_id(self._db, tenant_id, group_id)
 
         def serialize_group(group):
             json_object = {
@@ -123,7 +126,7 @@ class Bobby(object):
         :param str tenant_id: A tenant id
         :param str group_id: A groud id
         """
-        d = cass.delete_group(tenant_id, group_id)
+        d = cass.delete_group(self._db, tenant_id, group_id)
 
         def finish(_):
             request.setHeader('Content-Type', 'application/json')
@@ -139,7 +142,7 @@ class Bobby(object):
         :param str tenant_id: A tenant id.
         :param str group_id: A group id.
         """
-        d = cass.get_servers_by_group_id(tenant_id, group_id)
+        d = cass.get_servers_by_group_id(self._db, tenant_id, group_id)
 
         def serialize(servers):
             result = {'servers': servers}
@@ -162,7 +165,7 @@ class Bobby(object):
         server_id = content.get('serverId')
         entity_id = content.get('entityId')
 
-        d = cass.create_server(tenant_id, server_id, entity_id, group_id)
+        d = cass.create_server(self._db, tenant_id, server_id, entity_id, group_id)
 
         # Trigger actions to actually create the server's monitoring here
 
@@ -196,7 +199,7 @@ class Bobby(object):
         :param str group_id: A group id
         :param str server_id: A server id
         """
-        d = cass.get_server_by_server_id(tenant_id, group_id, server_id)
+        d = cass.get_server_by_server_id(self._db, tenant_id, group_id, server_id)
 
         def serialize(server):
             json_object = {
@@ -224,7 +227,7 @@ class Bobby(object):
         :param str group_id: A groud id
         :param str server_id: A server id
         """
-        d = cass.delete_server(tenant_id, group_id, server_id)
+        d = cass.delete_server(self._db, tenant_id, group_id, server_id)
 
         # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
         # here...
@@ -243,7 +246,7 @@ class Bobby(object):
         :param str tenant_id: A tenant id.
         :param str group_id: A group id.
         """
-        d = cass.get_policies_by_group_id(group_id)
+        d = cass.get_policies_by_group_id(self._db, group_id)
 
         def serialize(policies):
             result = {'policies': policies}
@@ -267,7 +270,7 @@ class Bobby(object):
         check_template_id = content.get('checkTemplate')
         policy_id = content.get('policyId')
 
-        d = cass.create_policy(policy_id, group_id, alarm_template_id, check_template_id)
+        d = cass.create_policy(self._db, policy_id, group_id, alarm_template_id, check_template_id)
 
         # Trigger actions to create the alarm and checks on the MaaS side and set things up
 
@@ -300,7 +303,7 @@ class Bobby(object):
         :param str group_id: A group id
         :param str policy_id: A policy id
         """
-        d = cass.get_policy_by_policy_id(group_id, policy_id)
+        d = cass.get_policy_by_policy_id(self._db, group_id, policy_id)
 
         def serialize(policy):
             # XXX: the actual way to do this is using a json encoder. Not now.
@@ -331,7 +334,7 @@ class Bobby(object):
         :param str group_id: A groud id
         :param str policy_id: A policy id
         """
-        d = cass.delete_policy(group_id, policy_id)
+        d = cass.delete_policy(self._db, group_id, policy_id)
 
         # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
         # here...
@@ -350,10 +353,10 @@ class Bobby(object):
         alarm_id = content.get('alarm').get('id')
         status = content.get('details').get('state')
 
-        d = cass.alter_alarm_state(alarm_id, status)
+        d = cass.alter_alarm_state(self._db, alarm_id, status)
 
         def check_quorum_health(policy_id):
-            return cass.check_quorum_health(policy_id)
+            return cass.check_quorum_health(self._db, policy_id)
         d.addCallback(check_quorum_health)
 
         def finish(health):

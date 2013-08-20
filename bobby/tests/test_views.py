@@ -32,7 +32,8 @@ class ViewTest(unittest.TestCase):
     """A TestCase for testing views."""
 
     def setUp(self):
-        self.bobby = views.Bobby()
+        self.db = mock.Mock()
+        self.bobby = views.Bobby(self.db)
 
 
 class TestGetGroups(ViewTest):
@@ -75,7 +76,7 @@ class TestGetGroups(ViewTest):
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
-        get_groups_by_tenant_id.assert_called_once_with('101010')
+        get_groups_by_tenant_id.assert_called_once_with(self.db, '101010')
 
 
 class TestCreateGroup(ViewTest):
@@ -113,7 +114,7 @@ class TestCreateGroup(ViewTest):
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
         create_group.assert_called_once_with(
-            '010101', 'uvwxyz', 'notification-abc', 'notification-def')
+            self.db, '010101', 'uvwxyz', 'notification-abc', 'notification-def')
 
 
 class TestGetGroup(ViewTest):
@@ -157,7 +158,7 @@ class TestDeleteGroup(ViewTest):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_group.assert_called_once_with('101010', 'uvwxyz')
+        delete_group.assert_called_once_with(self.db, '101010', 'uvwxyz')
 
 
 class TestGetServers(ViewTest):
@@ -280,7 +281,7 @@ class TestDeleteServer(ViewTest):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_server.assert_called_once_with('101010', 'uvwxyz', 'opqrst')
+        delete_server.assert_called_once_with(self.db, '101010', 'uvwxyz', 'opqrst')
 
 
 class TestGetPolicies(ViewTest):
@@ -411,7 +412,7 @@ class TestDeletePolicy(ViewTest):
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_policy.assert_called_once_with('uvwxyz', 'opqrst')
+        delete_policy.assert_called_once_with(self.db, 'uvwxyz', 'opqrst')
 
 
 class TestAlarm(ViewTest):
@@ -530,5 +531,5 @@ class TestAlarm(ViewTest):
         self.assertEqual(request.responseCode, 200)
 
         alter_alarm_state.assert_called_once_with(
-            data['alarm']['id'], data['details']['state'])
-        check_quorum_health.assert_called_once_with('policy-abcdef')
+            self.db, data['alarm']['id'], data['details']['state'])
+        check_quorum_health.assert_called_once_with(self.db, 'policy-abcdef')

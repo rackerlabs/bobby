@@ -16,7 +16,6 @@ class _DBTestCase(unittest.TestCase):
     def setUp(self):
         """Patch CQLClient."""
         self.client = mock.create_autospec(CQLClient)
-        cass.set_client(self.client)
 
 
 class TestGetGroupsByTenantId(_DBTestCase):
@@ -27,7 +26,7 @@ class TestGetGroupsByTenantId(_DBTestCase):
         expected = []
         self.client.execute.return_value = defer.succeed(expected)
 
-        d = cass.get_groups_by_tenant_id('101010')
+        d = cass.get_groups_by_tenant_id(self.client, '101010')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -48,7 +47,7 @@ class TestGetGroupById(_DBTestCase):
                     'notificationPlan': 'notificationPlan-jkl'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_group_by_id('101010', 'group-abc')
+        d = cass.get_group_by_id(self.client, '101010', 'group-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -61,7 +60,7 @@ class TestGetGroupById(_DBTestCase):
         """Raises an error if no group is found."""
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_group_by_id('101010', 'group-abc')
+        d = cass.get_group_by_id(self.client, '101010', 'group-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ResultNotFoundError))
@@ -70,7 +69,7 @@ class TestGetGroupById(_DBTestCase):
         """Raises an error if more than one group is found."""
         self.client.execute.return_value = defer.succeed(['group1', 'group2'])
 
-        d = cass.get_group_by_id('101010', 'group-abc')
+        d = cass.get_group_by_id(self.client, '101010', 'group-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
@@ -93,7 +92,7 @@ class TestCreateGroup(_DBTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = cass.create_group(expected['tenantId'], expected['groupId'],
+        d = cass.create_group(self.client, expected['tenantId'], expected['groupId'],
                               expected['notification'], expected['notificationPlan'])
 
         result = self.successResultOf(d)
@@ -122,7 +121,7 @@ class TestDeleteGroup(_DBTestCase):
         """Deletes a group."""
         self.client.execute.return_value = defer.succeed(None)
 
-        d = cass.delete_group('101010', 'group-abc')
+        d = cass.delete_group(self.client, '101010', 'group-abc')
 
         self.successResultOf(d)
         self.client.execute.assert_called_once_with(
@@ -144,7 +143,7 @@ class TestGetServersByGroupId(_DBTestCase):
                      'entityId': 'entity-uvw'}]
         self.client.execute.return_value = defer.succeed(expected)
 
-        d = cass.get_servers_by_group_id('101010', 'group-def')
+        d = cass.get_servers_by_group_id(self.client, '101010', 'group-def')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -164,7 +163,7 @@ class TestGetServerByServerId(_DBTestCase):
                     'entityId': 'entity-ghi'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_server_by_server_id('101010', 'group-xyz', 'server-abc')
+        d = cass.get_server_by_server_id(self.client, '101010', 'group-xyz', 'server-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -177,7 +176,7 @@ class TestGetServerByServerId(_DBTestCase):
         """Raises an error if no server is found."""
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_server_by_server_id('101010', 'group-xyz', 'server-abc')
+        d = cass.get_server_by_server_id(self.client, '101010', 'group-xyz', 'server-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ResultNotFoundError))
@@ -186,7 +185,7 @@ class TestGetServerByServerId(_DBTestCase):
         """Raises an error if more than one group is found."""
         self.client.execute.return_value = defer.succeed(['server-abc', 'server-def'])
 
-        d = cass.get_server_by_server_id('101010', 'group-xyz', 'server-abc')
+        d = cass.get_server_by_server_id(self.client, '101010', 'group-xyz', 'server-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
@@ -209,7 +208,7 @@ class TestCreateServer(_DBTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = cass.create_server(expected['tenantId'], expected['serverId'], expected['entityId'],
+        d = cass.create_server(self.client, expected['tenantId'], expected['serverId'], expected['entityId'],
                                expected['groupId'])
 
         result = self.successResultOf(d)
@@ -240,7 +239,7 @@ class TestDeleteServer(_DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        d = cass.delete_server('101010', 'group-xyz', 'server-abc')
+        d = cass.delete_server(self.client, '101010', 'group-xyz', 'server-abc')
 
         self.successResultOf(d)
 
@@ -270,7 +269,7 @@ class TestGetServerPoliciesByServerId(_DBTestCase):
                 return defer.succeed(expected)
         self.client.execute.side_effect = execute
 
-        d = cass.get_serverpolicies_by_server_id('group-abc', 'server-abc')
+        d = cass.get_serverpolicies_by_server_id(self.client, 'group-abc', 'server-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -293,7 +292,7 @@ class TestAddServerpolicy(_DBTestCase):
         """Adding a server policy is an insert in the database."""
         self.client.execute.return_value = defer.succeed(None)
 
-        d = cass.add_serverpolicy('server-abc', 'policy-def')
+        d = cass.add_serverpolicy(self.client, 'server-abc', 'policy-def')
 
         self.successResultOf(d)
         self.client.execute.assert_called_once_with(
@@ -309,7 +308,7 @@ class TestDeleteServerpolicy(_DBTestCase):
         """Deleting a server policy is a delete in the database."""
         self.client.execute.return_value = defer.succeed(None)
 
-        d = cass.delete_serverpolicy('server-abc', 'policy-def')
+        d = cass.delete_serverpolicy(self.client, 'server-abc', 'policy-def')
 
         self.successResultOf(d)
         self.client.execute.assert_called_once_with(
@@ -333,7 +332,7 @@ class TestGetPoliciesByGroupId(_DBTestCase):
                      'checkTemplate': 'checkTemplate-rst'}]
         self.client.execute.return_value = defer.succeed(expected)
 
-        d = cass.get_policies_by_group_id('group-def')
+        d = cass.get_policies_by_group_id(self.client, 'group-def')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -354,7 +353,7 @@ class TestGetPolicyByPolicyId(_DBTestCase):
                     'checkTemplate': 'checkTemplate-jkl'}
         self.client.execute.return_value = defer.succeed([expected])
 
-        d = cass.get_policy_by_policy_id('101010', 'policy-abc')
+        d = cass.get_policy_by_policy_id(self.client, '101010', 'policy-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -367,7 +366,7 @@ class TestGetPolicyByPolicyId(_DBTestCase):
         """Raises an error if no policy is found."""
         self.client.execute.return_value = defer.succeed([])
 
-        d = cass.get_policy_by_policy_id('101010', 'policy-abc')
+        d = cass.get_policy_by_policy_id(self.client, '101010', 'policy-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ResultNotFoundError))
@@ -376,7 +375,7 @@ class TestGetPolicyByPolicyId(_DBTestCase):
         """Raises an error if more than one policy is found."""
         self.client.execute.return_value = defer.succeed(['policy-abc', 'policy-def'])
 
-        d = cass.get_policy_by_policy_id('101010', 'policy-abc')
+        d = cass.get_policy_by_policy_id(self.client, '101010', 'policy-abc')
 
         result = self.failureResultOf(d)
         self.assertTrue(result.check(cass.ExcessiveResultsError))
@@ -399,8 +398,8 @@ class TestCreatePolicy(_DBTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = cass.create_policy(expected['policyId'], expected['groupId'],
-                               expected['alarmTemplate'],
+        d = cass.create_policy(self.client, expected['policyId'],
+                               expected['groupId'], expected['alarmTemplate'],
                                expected['checkTemplate'])
 
         result = self.successResultOf(d)
@@ -434,7 +433,7 @@ class TestDeletePolicy(_DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        d = cass.delete_policy('group-xyz', 'policy-abc')
+        d = cass.delete_policy(self.client, 'group-xyz', 'policy-abc')
 
         self.successResultOf(d)
 
@@ -455,7 +454,7 @@ class TestServerPoliciesCreateDestroy(_DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        d = cass.register_policy_on_server('policy-abc', 'server-abc', 'alABCD', 'chABCD')
+        d = cass.register_policy_on_server(self.client, 'policy-abc', 'server-abc', 'alABCD', 'chABCD')
 
         self.successResultOf(d)
 
@@ -474,7 +473,7 @@ class TestServerPoliciesCreateDestroy(_DBTestCase):
             return defer.succeed(None)
         self.client.execute.side_effect = execute
 
-        d = cass.deregister_policy_on_server('policy-abc', 'server-abc')
+        d = cass.deregister_policy_on_server(self.client, 'policy-abc', 'server-abc')
 
         self.successResultOf(d)
 
@@ -498,7 +497,7 @@ class TestServerPolicies(_DBTestCase):
                     'state': 'false'}]
         self.client.execute.return_value = defer.succeed(expected)
 
-        d = cass.get_policy_state('policy-abc')
+        d = cass.get_policy_state(self.client, 'policy-abc')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -529,7 +528,7 @@ class TestAlterAlarmState(_DBTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = cass.alter_alarm_state(expected['alarmId'], False)
+        d = cass.alter_alarm_state(self.client, expected['alarmId'], False)
         result = self.successResultOf(d)
 
         self.assertEqual(result, ('policy-abc', 'server-def'))
@@ -576,7 +575,7 @@ class TestCheckQuorumHealth(_DBTestCase):
 
         self.client.execute.side_effect = execute
 
-        d = cass.check_quorum_health('alarm-uvwxyz')
+        d = cass.check_quorum_health(self.client, 'alarm-uvwxyz')
 
         result = self.successResultOf(d)
         self.assertFalse(result)
@@ -604,7 +603,7 @@ class TestCheckQuorumHealth(_DBTestCase):
 
         self.client.execute.side_effect = execute
 
-        d = cass.check_quorum_health('policy-uvwxyz')
+        d = cass.check_quorum_health(self.client, 'policy-uvwxyz')
 
         result = self.successResultOf(d)
         self.assertTrue(result)
