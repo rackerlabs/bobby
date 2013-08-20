@@ -28,7 +28,14 @@ class BobbyDummyRequest(DummyRequest):
         return FakeURLPath
 
 
-class TestGetGroups(unittest.TestCase):
+class ViewTest(unittest.TestCase):
+    """A TestCase for testing views."""
+
+    def setUp(self):
+        self.bobby = views.Bobby()
+
+
+class TestGetGroups(ViewTest):
     """Test GET /{tenantId}/groups"""
 
     @mock.patch('bobby.cass.get_groups_by_tenant_id')
@@ -63,7 +70,7 @@ class TestGetGroups(unittest.TestCase):
         get_groups_by_tenant_id.return_value = defer.succeed(groups)
 
         request = BobbyDummyRequest('/101010/groups')
-        d = views.get_groups(request, '101010')
+        d = self.bobby.get_groups(request, '101010')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
@@ -71,7 +78,7 @@ class TestGetGroups(unittest.TestCase):
         get_groups_by_tenant_id.assert_called_once_with('101010')
 
 
-class TestCreateGroup(unittest.TestCase):
+class TestCreateGroup(ViewTest):
     """Test POST /{tenantId}/groups"""
 
     @mock.patch('bobby.cass.create_group')
@@ -100,7 +107,7 @@ class TestCreateGroup(unittest.TestCase):
                                     content=json.dumps(request_json))
         request.method = 'POST'
 
-        d = views.create_group(request, '010101')
+        d = self.bobby.create_group(request, '010101')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
@@ -109,7 +116,7 @@ class TestCreateGroup(unittest.TestCase):
             '010101', 'uvwxyz', 'notification-abc', 'notification-def')
 
 
-class TestGetGroup(unittest.TestCase):
+class TestGetGroup(ViewTest):
     """Test GET /{tenantId}/groups/{groupId}"""
 
     @mock.patch('bobby.cass.get_group_by_id')
@@ -130,14 +137,14 @@ class TestGetGroup(unittest.TestCase):
         get_group_by_id.return_value = defer.succeed(group)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz')
-        d = views.get_group(request, '101010', 'uvwxyz')
+        d = self.bobby.get_group(request, '101010', 'uvwxyz')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestDeleteGroup(unittest.TestCase):
+class TestDeleteGroup(ViewTest):
     """Test DELETE /{tenantId}/groups/{groupId}"""
 
     @mock.patch('bobby.cass.delete_group')
@@ -146,14 +153,14 @@ class TestDeleteGroup(unittest.TestCase):
         delete_group.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz')
-        d = views.delete_group(request, '101010', 'uvwxyz')
+        d = self.bobby.delete_group(request, '101010', 'uvwxyz')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         delete_group.assert_called_once_with('101010', 'uvwxyz')
 
 
-class TestGetServers(unittest.TestCase):
+class TestGetServers(ViewTest):
     """Test GET /{tenantId}/groups/{groupId}."""
 
     @mock.patch('bobby.cass.get_servers_by_group_id')
@@ -183,14 +190,14 @@ class TestGetServers(unittest.TestCase):
         get_servers_by_group_id.return_value = defer.succeed(servers)
 
         request = BobbyDummyRequest('/101010/groups/group-def/servers')
-        d = views.get_servers(request, '101010', 'group-def')
+        d = self.bobby.get_servers(request, '101010', 'group-def')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestCreateServer(unittest.TestCase):
+class TestCreateServer(ViewTest):
     """Test POST /{tenantId}/groups"""
 
     @mock.patch('bobby.cass.create_server')
@@ -224,14 +231,14 @@ class TestCreateServer(unittest.TestCase):
                                     content=json.dumps(request_json))
         request.method = 'POST'
 
-        d = views.create_server(request, '101010', server['groupId'])
+        d = self.bobby.create_server(request, '101010', server['groupId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestGetServer(unittest.TestCase):
+class TestGetServer(ViewTest):
     """Test GET /{tenantId}/groups/{groupId}/servers/{serverId}"""
 
     @mock.patch('bobby.cass.get_server_by_server_id')
@@ -253,14 +260,14 @@ class TestGetServer(unittest.TestCase):
         get_server_by_server_id.return_value = defer.succeed(server)
 
         request = BobbyDummyRequest('/101010/groups/group-uvw/servers/server-rst')
-        d = views.get_server(request, '101010', server['groupId'], server['serverId'])
+        d = self.bobby.get_server(request, '101010', server['groupId'], server['serverId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestDeleteServer(unittest.TestCase):
+class TestDeleteServer(ViewTest):
     """Test DELETE /{tenantId}/groups/{groupId}/servers/{serverId}"""
 
     @mock.patch('bobby.cass.delete_server')
@@ -269,14 +276,14 @@ class TestDeleteServer(unittest.TestCase):
         delete_server.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz/servers/opqrst')
-        d = views.delete_server(request, '101010', 'uvwxyz', 'opqrst')
+        d = self.bobby.delete_server(request, '101010', 'uvwxyz', 'opqrst')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         delete_server.assert_called_once_with('101010', 'uvwxyz', 'opqrst')
 
 
-class TestGetPolicies(unittest.TestCase):
+class TestGetPolicies(ViewTest):
     """Test GET /{tenantId}/groups/{groupId}."""
 
     @mock.patch('bobby.cass.get_policies_by_group_id')
@@ -314,14 +321,14 @@ class TestGetPolicies(unittest.TestCase):
         get_policies_by_group_id.return_value = defer.succeed(policies)
 
         request = BobbyDummyRequest('/101010/groups/group-def/policies')
-        d = views.get_policies(request, '101010', 'group-def')
+        d = self.bobby.get_policies(request, '101010', 'group-def')
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestCreatePolicy(unittest.TestCase):
+class TestCreatePolicy(ViewTest):
     """Test POST /{tenantId}/groups/{groupId}/policies"""
 
     @mock.patch('bobby.cass.create_policy')
@@ -353,14 +360,14 @@ class TestCreatePolicy(unittest.TestCase):
                                     content=json.dumps(request_json))
         request.method = 'POST'
 
-        d = views.create_policy(request, '101010', policy['groupId'])
+        d = self.bobby.create_policy(request, '101010', policy['groupId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestGetPolicy(unittest.TestCase):
+class TestGetPolicy(ViewTest):
     """Test GET /{tenantId}/groups/{groupId}/policies/{serverId}"""
 
     @mock.patch('bobby.cass.get_policy_by_policy_id')
@@ -384,14 +391,14 @@ class TestGetPolicy(unittest.TestCase):
         get_policy_by_policy_id.return_value = defer.succeed(policy)
 
         request = BobbyDummyRequest('/101010/groups/group-def/policies/policy-abc')
-        d = views.get_policy(request, '101010', policy['groupId'], policy['policyId'])
+        d = self.bobby.get_policy(request, '101010', policy['groupId'], policy['policyId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
 
 
-class TestDeletePolicy(unittest.TestCase):
+class TestDeletePolicy(ViewTest):
     """Test DELETE /{tenantId}/groups/{groupId}/policiess/{policyId}"""
 
     @mock.patch('bobby.cass.delete_policy')
@@ -400,14 +407,14 @@ class TestDeletePolicy(unittest.TestCase):
         delete_policy.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz/policies/opqrst')
-        d = views.delete_policy(request, '101010', 'uvwxyz', 'opqrst')
+        d = self.bobby.delete_policy(request, '101010', 'uvwxyz', 'opqrst')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         delete_policy.assert_called_once_with('uvwxyz', 'opqrst')
 
 
-class TestAlarm(unittest.TestCase):
+class TestAlarm(ViewTest):
     """Test MaaS alarm endpoint."""
 
     @mock.patch('bobby.cass.check_quorum_health')
@@ -517,7 +524,7 @@ class TestAlarm(unittest.TestCase):
         }
         request = BobbyDummyRequest('/alarm', content=json.dumps(data))
         request.method = 'POST'
-        d = views.alarm(request)
+        d = self.bobby.alarm(request)
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 200)

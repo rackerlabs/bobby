@@ -5,343 +5,360 @@ import json
 from klein import Klein
 
 from bobby import cass
-from otter.rest.decorators import with_transaction_id
-
-app = Klein()
 
 
-@app.route('/<string:tenant_id>/groups', methods=['GET'])
-@with_transaction_id()
-def get_groups(request, log, tenant_id):
-    """Get all groups owned by a given tenant_id.
-
-    :param str tenant_id: A tenant id
-    """
-    d = cass.get_groups_by_tenant_id(tenant_id)
-
-    def _return_result(groups):
-        result = {'groups': groups}
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(result))
-        request.finish()
-    return d.addCallback(_return_result)
+from functools import wraps
+from twisted.python import reflect
+from otter.log import log
+from otter.util.hashkey import generate_transaction_id
 
 
-@app.route('/<string:tenant_id>/groups', methods=['POST'])
-@with_transaction_id()
-def create_group(request, log, tenant_id):
-    """Create a new group.
-
-    Receive application/json content for new group creation.
-
-    :param str tenant_id: A tenant id
-    """
-    content = json.loads(request.content.read())
-    group_id = content.get('groupId')
-    notification = content.get('notification')
-    notification_plan = content.get('notificationPlan')
-
-    d = cass.create_group(tenant_id, group_id, notification, notification_plan)
-
-    def _serialize_object(group):
-        # XXX: the actual way to do this is using a json encoder. Not now.
-        json_object = {
-            'groupId': group['groupId'],
-            'links': [{
-                'href': '{0}{1}'.format(request.URLPath().path, group['groupId']),
-                'rel': 'self'
-            }],
-            'notification': group['notification'],
-            'notificationPlan': group['notificationPlan'],
-            'tenantId': group['tenantId']
-        }
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(201)
-        request.write(json.dumps(json_object))
-        request.finish()
-    return d.addCallback(_serialize_object)
+def with_transaction_id():
+    def decorator(f):
+        @wraps(f)
+        def _(self, request, *args, **kwargs):
+            transaction_id = generate_transaction_id()
+            request.setHeader('X-Response_Id', transaction_id)
+            bound_log = log.bind(
+                system=reflect.fullyQualifiedName(f),
+                transaction_id=transaction_id)
+            bound_log.bind(
+                method=request.method,
+                uri=request.uri,
+                clientproto=request.clientproto,
+                referer=request.getHeader('referer'),
+                useragent=request.getHeader('user-agent')
+            ).msg('Recieved request')
+            return f(self, request, bound_log, *args, **kwargs)
+        return _
+    return decorator
 
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['GET'])
-@with_transaction_id()
-def get_group(request, log, tenant_id, group_id):
-    """Get a group.
+class Bobby(object):
+    """Bobby app views."""
 
-    :param str tenant_id: A tenant id
-    :param str group_id: A group id.
-    """
-    d = cass.get_group_by_id(tenant_id, group_id)
+    app = Klein()
 
-    def serialize_group(group):
-        json_object = {
-            'groupId': group['groupId'],
-            'links': [{
-                'href': '{0}'.format(request.URLPath().path),
-                'rel': 'self'
-            }],
-            'notification': group['notification'],
-            'notificationPlan': group['notificationPlan'],
-            'tenantId': group['tenantId']
-        }
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(json_object))
-        request.finish()
-    return d.addCallback(serialize_group)
+    @app.route('/<string:tenant_id>/groups', methods=['GET'])
+    @with_transaction_id()
+    def get_groups(self, request, log, tenant_id):
+        """Get all groups owned by a given tenant_id.
 
+        :param str tenant_id: A tenant id
+        """
+        d = cass.get_groups_by_tenant_id(tenant_id)
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['DELETE'])
-@with_transaction_id()
-def delete_group(request, log, tenant_id, group_id):
-    """Delete a group.
+        def _return_result(groups):
+            result = {'groups': groups}
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(result))
+            request.finish()
+        return d.addCallback(_return_result)
 
-    :param str tenant_id: A tenant id
-    :param str group_id: A groud id
-    """
-    d = cass.delete_group(tenant_id, group_id)
+    @app.route('/<string:tenant_id>/groups', methods=['POST'])
+    @with_transaction_id()
+    def create_group(self, request, log, tenant_id):
+        """Create a new group.
 
-    def finish(_):
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(204)
-        request.finish()
-    return d.addCallback(finish)
+        Receive application/json content for new group creation.
 
+        :param str tenant_id: A tenant id
+        """
+        content = json.loads(request.content.read())
+        group_id = content.get('groupId')
+        notification = content.get('notification')
+        notification_plan = content.get('notificationPlan')
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['GET'])
-@with_transaction_id()
-def get_servers(request, log, tenant_id, group_id):
-    """Get all servers owned by a given group_id.
+        d = cass.create_group(tenant_id, group_id, notification, notification_plan)
 
-    :param str tenant_id: A tenant id.
-    :param str group_id: A group id.
-    """
-    d = cass.get_servers_by_group_id(tenant_id, group_id)
-
-    def serialize(servers):
-        result = {'servers': servers}
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(result))
-        request.finish()
-    return d.addCallback(serialize)
-
-
-@app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['POST'])
-@with_transaction_id()
-def create_server(request, log, tenant_id, group_id):
-    """Create a new server.
-
-    Receive application/json content for new server creation.
-
-    :param str tenant_id: A tenant id
-    :param str group_id: A group id
-    """
-    content = json.loads(request.content.read())
-    server_id = content.get('serverId')
-    entity_id = content.get('entityId')
-
-    d = cass.create_server(tenant_id, server_id, entity_id, group_id)
-
-    # Trigger actions to actually create the server's monitoring here
-
-    def serialize(server):
-        # XXX: the actual way to do this is using a json encoder. Not now.
-        json_object = {
-            'entityId': server['entityId'],
-            'groupId': server['groupId'],
-            'links': [
-                {
-                    'href': '{0}{1}'.format(request.URLPath().path, server['serverId']),
+        def _serialize_object(group):
+            # XXX: the actual way to do this is using a json encoder. Not now.
+            json_object = {
+                'groupId': group['groupId'],
+                'links': [{
+                    'href': '{0}{1}'.format(request.URLPath().path, group['groupId']),
                     'rel': 'self'
-                }
-            ],
-            'serverId': server['serverId']
-        }
+                }],
+                'notification': group['notification'],
+                'notificationPlan': group['notificationPlan'],
+                'tenantId': group['tenantId']
+            }
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(201)
+            request.write(json.dumps(json_object))
+            request.finish()
+        return d.addCallback(_serialize_object)
 
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(201)
-        request.write(json.dumps(json_object))
-        request.finish()
+    @app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['GET'])
+    @with_transaction_id()
+    def get_group(self, request, log, tenant_id, group_id):
+        """Get a group.
 
-    return d.addCallback(serialize)
+        :param str tenant_id: A tenant id
+        :param str group_id: A group id.
+        """
+        d = cass.get_group_by_id(tenant_id, group_id)
 
-
-@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['GET'])
-@with_transaction_id()
-def get_server(request, log, tenant_id, group_id, server_id):
-    """Get a server.
-
-    :param str tenant_id: A tenant id
-    :param str group_id: A group id
-    :param str server_id: A server id
-    """
-    d = cass.get_server_by_server_id(tenant_id, group_id, server_id)
-
-    def serialize(server):
-        json_object = {
-            'entityId': server['entityId'],
-            'groupId': server['groupId'],
-            'links': [
-                {
+        def serialize_group(group):
+            json_object = {
+                'groupId': group['groupId'],
+                'links': [{
                     'href': '{0}'.format(request.URLPath().path),
                     'rel': 'self'
-                }
-            ],
-            'serverId': server['serverId']
-        }
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(json_object))
-        request.finish()
-    return d.addCallback(serialize)
+                }],
+                'notification': group['notification'],
+                'notificationPlan': group['notificationPlan'],
+                'tenantId': group['tenantId']
+            }
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(json_object))
+            request.finish()
+        return d.addCallback(serialize_group)
 
+    @app.route('/<string:tenant_id>/groups/<string:group_id>', methods=['DELETE'])
+    @with_transaction_id()
+    def delete_group(self, request, log, tenant_id, group_id):
+        """Delete a group.
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['DELETE'])
-@with_transaction_id()
-def delete_server(request, log, tenant_id, group_id, server_id):
-    """Delete a server.
+        :param str tenant_id: A tenant id
+        :param str group_id: A groud id
+        """
+        d = cass.delete_group(tenant_id, group_id)
 
-    :param str tenant_id: A tenant id
-    :param str group_id: A groud id
-    :param str server_id: A server id
-    """
-    d = cass.delete_server(tenant_id, group_id, server_id)
+        def finish(_):
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(204)
+            request.finish()
+        return d.addCallback(finish)
 
-    # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
-    # here...
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['GET'])
+    @with_transaction_id()
+    def get_servers(self, request, log, tenant_id, group_id):
+        """Get all servers owned by a given group_id.
 
-    def finish(_):
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(204)
-        request.finish()
-    return d.addCallback(finish)
+        :param str tenant_id: A tenant id.
+        :param str group_id: A group id.
+        """
+        d = cass.get_servers_by_group_id(tenant_id, group_id)
 
+        def serialize(servers):
+            result = {'servers': servers}
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(result))
+            request.finish()
+        return d.addCallback(serialize)
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])
-@with_transaction_id()
-def get_policies(request, log, tenant_id, group_id):
-    """Get all policies owned by a given group_id.
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/servers', methods=['POST'])
+    @with_transaction_id()
+    def create_server(self, request, log, tenant_id, group_id):
+        """Create a new server.
 
-    :param str tenant_id: A tenant id.
-    :param str group_id: A group id.
-    """
-    d = cass.get_policies_by_group_id(group_id)
+        Receive application/json content for new server creation.
 
-    def serialize(policies):
-        result = {'policies': policies}
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(result))
-        request.finish()
-    return d.addCallback(serialize)
+        :param str tenant_id: A tenant id
+        :param str group_id: A group id
+        """
+        content = json.loads(request.content.read())
+        server_id = content.get('serverId')
+        entity_id = content.get('entityId')
 
+        d = cass.create_server(tenant_id, server_id, entity_id, group_id)
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['POST'])
-@with_transaction_id()
-def create_policy(request, log, tenant_id, group_id):
-    """Create a new policy.
+        # Trigger actions to actually create the server's monitoring here
 
-    Receive application/json content for new policy creation.
+        def serialize(server):
+            # XXX: the actual way to do this is using a json encoder. Not now.
+            json_object = {
+                'entityId': server['entityId'],
+                'groupId': server['groupId'],
+                'links': [
+                    {
+                        'href': '{0}{1}'.format(request.URLPath().path, server['serverId']),
+                        'rel': 'self'
+                    }
+                ],
+                'serverId': server['serverId']
+            }
 
-    :param str tenant_id: A tenant id
-    :param str group_id: A group id
-    """
-    content = json.loads(request.content.read())
-    alarm_template_id = content.get('alarmTemplate')
-    check_template_id = content.get('checkTemplate')
-    policy_id = content.get('policyId')
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(201)
+            request.write(json.dumps(json_object))
+            request.finish()
 
-    d = cass.create_policy(policy_id, group_id, alarm_template_id, check_template_id)
+        return d.addCallback(serialize)
 
-    # Trigger actions to create the alarm and checks on the MaaS side and set things up
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['GET'])
+    @with_transaction_id()
+    def get_server(self, request, log, tenant_id, group_id, server_id):
+        """Get a server.
 
-    def serialize(policy):
-        # XXX: the actual way to do this is using a json encoder. Not now.
-        json_object = {
-            'alarmTemplate': policy['alarmTemplate'],
-            'checkTemplate': policy['checkTemplate'],
-            'groupId': policy['groupId'],
-            'links': [
-                {
-                    'href': '{0}{1}'.format(request.URLPath().path, policy['policyId']),
-                    'rel': 'self'
-                }
-            ],
-            'policyId': policy['policyId']
-        }
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(201)
-        request.write(json.dumps(json_object))
-        request.finish()
-    return d.addCallback(serialize)
+        :param str tenant_id: A tenant id
+        :param str group_id: A group id
+        :param str server_id: A server id
+        """
+        d = cass.get_server_by_server_id(tenant_id, group_id, server_id)
 
+        def serialize(server):
+            json_object = {
+                'entityId': server['entityId'],
+                'groupId': server['groupId'],
+                'links': [
+                    {
+                        'href': '{0}'.format(request.URLPath().path),
+                        'rel': 'self'
+                    }
+                ],
+                'serverId': server['serverId']
+            }
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(json_object))
+            request.finish()
+        return d.addCallback(serialize)
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['GET'])
-@with_transaction_id()
-def get_policy(request, log, tenant_id, group_id, policy_id):
-    """Get a policy.
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/servers/<string:server_id>', methods=['DELETE'])
+    @with_transaction_id()
+    def delete_server(self, request, log, tenant_id, group_id, server_id):
+        """Delete a server.
 
-    :param str tenant_id: A tenant id
-    :param str group_id: A group id
-    :param str policy_id: A policy id
-    """
-    d = cass.get_policy_by_policy_id(group_id, policy_id)
+        :param str tenant_id: A tenant id
+        :param str group_id: A groud id
+        :param str server_id: A server id
+        """
+        d = cass.delete_server(tenant_id, group_id, server_id)
 
-    def serialize(policy):
-        # XXX: the actual way to do this is using a json encoder. Not now.
-        json_object = {
-            'alarmTemplate': policy['alarmTemplate'],
-            'checkTemplate': policy['checkTemplate'],
-            'groupId': policy['groupId'],
-            'links': [
-                {
-                    'href': '{0}'.format(request.URLPath().path),
-                    'rel': 'self'
-                }
-            ],
-            'policyId': policy['policyId']
-        }
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(json_object))
-        request.finish()
-    return d.addCallback(serialize)
+        # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
+        # here...
 
+        def finish(_):
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(204)
+            request.finish()
+        return d.addCallback(finish)
 
-@app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>',
-           methods=['DELETE'])
-@with_transaction_id()
-def delete_policy(request, log, tenant_id, group_id, policy_id):
-    """Delete a policy.
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['GET'])
+    @with_transaction_id()
+    def get_policies(self, request, log, tenant_id, group_id):
+        """Get all policies owned by a given group_id.
 
-    :param str tenant_id: A tenant id
-    :param str group_id: A groud id
-    :param str policy_id: A policy id
-    """
-    d = cass.delete_policy(group_id, policy_id)
+        :param str tenant_id: A tenant id.
+        :param str group_id: A group id.
+        """
+        d = cass.get_policies_by_group_id(group_id)
 
-    # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
-    # here...
+        def serialize(policies):
+            result = {'policies': policies}
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(result))
+            request.finish()
+        return d.addCallback(serialize)
 
-    def finish(_):
-        request.setHeader('Content-Type', 'application/json')
-        request.setResponseCode(204)
-        request.finish()
-    return d.addCallback(finish)
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/policies', methods=['POST'])
+    @with_transaction_id()
+    def create_policy(self, request, log, tenant_id, group_id):
+        """Create a new policy.
 
+        Receive application/json content for new policy creation.
 
-@app.route('/alarm', methods=['POST'])
-@with_transaction_id()
-def alarm(request, log):
-    """Change the state of an alarm."""
-    content = json.loads(request.content.read())
-    alarm_id = content.get('alarm').get('id')
-    status = content.get('details').get('state')
+        :param str tenant_id: A tenant id
+        :param str group_id: A group id
+        """
+        content = json.loads(request.content.read())
+        alarm_template_id = content.get('alarmTemplate')
+        check_template_id = content.get('checkTemplate')
+        policy_id = content.get('policyId')
 
-    d = cass.alter_alarm_state(alarm_id, status)
+        d = cass.create_policy(policy_id, group_id, alarm_template_id, check_template_id)
 
-    def check_quorum_health(policy_id):
-        return cass.check_quorum_health(policy_id)
-    d.addCallback(check_quorum_health)
+        # Trigger actions to create the alarm and checks on the MaaS side and set things up
 
-    def finish(health):
-        #TODO: do something with server health
+        def serialize(policy):
+            # XXX: the actual way to do this is using a json encoder. Not now.
+            json_object = {
+                'alarmTemplate': policy['alarmTemplate'],
+                'checkTemplate': policy['checkTemplate'],
+                'groupId': policy['groupId'],
+                'links': [
+                    {
+                        'href': '{0}{1}'.format(request.URLPath().path, policy['policyId']),
+                        'rel': 'self'
+                    }
+                ],
+                'policyId': policy['policyId']
+            }
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(201)
+            request.write(json.dumps(json_object))
+            request.finish()
+        return d.addCallback(serialize)
 
-        request.setResponseCode(200)
-        request.finish()
-    return d.addCallback(finish)
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>', methods=['GET'])
+    @with_transaction_id()
+    def get_policy(self, request, log, tenant_id, group_id, policy_id):
+        """Get a policy.
+
+        :param str tenant_id: A tenant id
+        :param str group_id: A group id
+        :param str policy_id: A policy id
+        """
+        d = cass.get_policy_by_policy_id(group_id, policy_id)
+
+        def serialize(policy):
+            # XXX: the actual way to do this is using a json encoder. Not now.
+            json_object = {
+                'alarmTemplate': policy['alarmTemplate'],
+                'checkTemplate': policy['checkTemplate'],
+                'groupId': policy['groupId'],
+                'links': [
+                    {
+                        'href': '{0}'.format(request.URLPath().path),
+                        'rel': 'self'
+                    }
+                ],
+                'policyId': policy['policyId']
+            }
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(json_object))
+            request.finish()
+        return d.addCallback(serialize)
+
+    @app.route('/<string:tenant_id>/groups/<string:group_id>/policies/<string:policy_id>',
+               methods=['DELETE'])
+    @with_transaction_id()
+    def delete_policy(self, request, log, tenant_id, group_id, policy_id):
+        """Delete a policy.
+
+        :param str tenant_id: A tenant id
+        :param str group_id: A groud id
+        :param str policy_id: A policy id
+        """
+        d = cass.delete_policy(group_id, policy_id)
+
+        # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
+        # here...
+
+        def finish(_):
+            request.setHeader('Content-Type', 'application/json')
+            request.setResponseCode(204)
+            request.finish()
+        return d.addCallback(finish)
+
+    @app.route('/alarm', methods=['POST'])
+    @with_transaction_id()
+    def alarm(self, request, log):
+        """Change the state of an alarm."""
+        content = json.loads(request.content.read())
+        alarm_id = content.get('alarm').get('id')
+        status = content.get('details').get('state')
+
+        d = cass.alter_alarm_state(alarm_id, status)
+
+        def check_quorum_health(policy_id):
+            return cass.check_quorum_health(policy_id)
+        d.addCallback(check_quorum_health)
+
+        def finish(health):
+            #TODO: do something with server health
+
+            request.setResponseCode(200)
+            request.finish()
+        return d.addCallback(finish)

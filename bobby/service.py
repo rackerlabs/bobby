@@ -6,7 +6,7 @@ from twisted.web import server
 from silverberg.client import CQLClient
 
 from bobby import cass
-from bobby.views import app
+from bobby.views import Bobby
 
 
 class Options(usage.Options):
@@ -34,8 +34,9 @@ def makeService(options):
     setUpCQLClient(options)
     application = service.Application("Dammit, Bobby!")
     services = service.IServiceCollection(application)
+    bobby = Bobby()
     bobbyServer = strports.service(
         'tcp:{0}'.format(options["port"]),
-        server.Site(app.resource()))
+        server.Site(bobby.app.resource()))
     bobbyServer.setServiceParent(application)
     return services
