@@ -6,3 +6,4 @@ _trial_coverage
 _trial_temp
 schema/setup-*.cql
 schema/teardown-*.cql
+dropin.cache

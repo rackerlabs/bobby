@@ -7,7 +7,7 @@ PYTHONLINT=${SCRIPTSDIR}/python-lint.py
 PYDIRS=${CODEDIR} ${SCRIPTSDIR}
 
 run:
-	twistd -n -y app.tac
+	twistd -n bobby
 
 test:
 	trial bobby.tests

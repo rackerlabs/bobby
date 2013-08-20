@@ -1,4 +1,9 @@
 klein
 mock
 silverberg
+treq
 Twisted
+iso8601
+jsonschema
+croniter
+https://github.com/rackerlabs/otter/archive/master.zip
