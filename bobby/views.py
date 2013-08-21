@@ -355,7 +355,7 @@ class Bobby(object):
 
         d = cass.alter_alarm_state(self._db, alarm_id, status)
 
-        def check_quorum_health(policy_id):
+        def check_quorum_health((policy_id, server_id)):
             return cass.check_quorum_health(self._db, policy_id)
         d.addCallback(check_quorum_health)
 
