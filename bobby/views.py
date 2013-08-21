@@ -1,16 +1,16 @@
 # Copyright 2013 Rackspace, Inc.
 """HTTP REST API endpoints."""
+from functools import wraps
 import json
 
 from klein import Klein
-
-from bobby import cass
-
-
-from functools import wraps
-from twisted.python import reflect
 from otter.log import log
 from otter.util.hashkey import generate_transaction_id
+from twisted.internet import defer
+from twisted.python import reflect
+
+from bobby import cass
+from bobby.worker import BobbyWorker
 
 
 def with_transaction_id():
@@ -41,6 +41,7 @@ class Bobby(object):
 
     def __init__(self, db):
         self._db = db
+        self._worker = BobbyWorker(self._db)
 
     @app.route('/<string:tenant_id>/groups', methods=['GET'])
     @with_transaction_id()
@@ -167,7 +168,10 @@ class Bobby(object):
 
         d = cass.create_server(self._db, tenant_id, server_id, entity_id, group_id)
 
-        # Trigger actions to actually create the server's monitoring here
+        def create_entity(server):
+            return defer.success(server)
+
+        # TODO: Trigger actions to actually create the server's monitoring here
 
         def serialize(server):
             # XXX: the actual way to do this is using a json encoder. Not now.
