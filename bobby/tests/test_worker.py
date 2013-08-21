@@ -6,7 +6,7 @@ from twisted.internet import defer
 from twisted.trial import unittest
 from silverberg.client import CQLClient
 
-from bobby import cass, worker
+from bobby import worker
 from bobby.ele import MaasClient
 
 
@@ -16,7 +16,6 @@ class _WorkerTestCase(unittest.TestCase):
     def setUp(self):
         """Patch CQLClient."""
         self.client = mock.create_autospec(CQLClient)
-        cass.set_client(self.client)
 
 
 class TestCreateServerEntity(_WorkerTestCase):
@@ -71,7 +70,7 @@ class TestAddPolicyToServer(_WorkerTestCase):
         })
         self.client.execute.return_value = defer.succeed(None)
 
-        d = worker.add_policy_to_server('t1', 'p1', 's1', 'enOne',
+        d = worker.add_policy_to_server(self.client, 't1', 'p1', 's1', 'enOne',
                                         example_check_template, "ALARM_DSL", "npBlah")
 
         result = self.successResultOf(d)
@@ -115,7 +114,7 @@ class TestCreateGroup(_WorkerTestCase):
                 return defer.succeed([expected])
         self.client.execute.side_effect = execute
 
-        d = worker.create_group('101010', 'g1')
+        d = worker.create_group(self.client, '101010', 'g1')
 
         result = self.successResultOf(d)
         self.assertEqual(result, expected)
@@ -185,7 +184,7 @@ class TestAddServer(_WorkerTestCase):
                 return defer.succeed(expected)
         self.client.execute.side_effect = execute
 
-        d = worker.apply_policies_to_server('101010', 'group-abc', 'server1', 'enOne', 'npBlah')
+        d = worker.apply_policies_to_server(self.client, '101010', 'group-abc', 'server1', 'enOne', 'npBlah')
         result = self.successResultOf(d)
         self.assertEqual(result, None)
 
@@ -260,7 +259,7 @@ class TestAddPolicy(_WorkerTestCase):
                         'args': 'blah'}
         }
 
-        d = worker.apply_policy('101010', 'group-abc', 'policy1', example_check_template,
+        d = worker.apply_policy(self.client, '101010', 'group-abc', 'policy1', example_check_template,
                                 'ALARM DSL', 'npBlah')
 
         result = self.successResultOf(d)
