@@ -9,6 +9,7 @@ from twisted.trial import unittest
 from twisted.web.test.requesthelper import DummyRequest
 
 from bobby import views
+from bobby.worker import BobbyWorker
 
 
 class BobbyDummyRequest(DummyRequest):
@@ -34,6 +35,9 @@ class ViewTest(unittest.TestCase):
     def setUp(self):
         self.db = mock.Mock()
         self.bobby = views.Bobby(self.db)
+
+        self.worker = mock.create_autospec(BobbyWorker)
+        self.bobby._worker = self.worker
 
 
 class TestGetGroups(ViewTest):
@@ -201,8 +205,7 @@ class TestGetServers(ViewTest):
 class TestCreateServer(ViewTest):
     """Test POST /{tenantId}/groups"""
 
-    @mock.patch('bobby.cass.create_server')
-    def test_create_server(self, create_server):
+    def test_create_server(self):
         """POSTing application/json creates a server."""
         expected = {
             'entityId': 'entity-xyz',
@@ -217,7 +220,7 @@ class TestCreateServer(ViewTest):
         }
         server = expected.copy()
         del server['links']
-        create_server.return_value = defer.succeed(server)
+        self.worker.create_server.return_value = defer.succeed(server)
 
         request_json = {
             'entityId': 'entity-xyz',

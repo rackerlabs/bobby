@@ -6,7 +6,6 @@ import json
 from klein import Klein
 from otter.log import log
 from otter.util.hashkey import generate_transaction_id
-from twisted.internet import defer
 from twisted.python import reflect
 
 from bobby import cass
@@ -159,22 +158,18 @@ class Bobby(object):
 
         Receive application/json content for new server creation.
 
+        :param request: Twisted IRequest object.
+        :param log: A log object.
         :param str tenant_id: A tenant id
         :param str group_id: A group id
         """
+        # The server object is one provided via the nova API.
         content = json.loads(request.content.read())
-        server_id = content.get('serverId')
-        entity_id = content.get('entityId')
+        server = content.get('server')
 
-        d = cass.create_server(self._db, tenant_id, server_id, entity_id, group_id)
-
-        def create_entity(server):
-            return defer.success(server)
-
-        # TODO: Trigger actions to actually create the server's monitoring here
+        d = self._worker.create_server(tenant_id, group_id, server)
 
         def serialize(server):
-            # XXX: the actual way to do this is using a json encoder. Not now.
             json_object = {
                 'entityId': server['entityId'],
                 'groupId': server['groupId'],
