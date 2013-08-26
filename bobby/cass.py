@@ -97,6 +97,7 @@ def get_server_by_server_id(db, tenant_id, group_id, server_id):
     return d.addCallback(return_server)
 
 
+# TODO: the order of these arguments makes almost no sense. Fix it plz.
 def create_server(db, tenant_id, server_id, entity_id, group_id):
     """Create and return a new server dict."""
     query = ' '.join([
