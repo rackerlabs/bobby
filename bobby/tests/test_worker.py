@@ -10,25 +10,32 @@ from bobby import worker
 from bobby.ele import MaasClient
 
 
-class _WorkerTestCase(unittest.TestCase):
-    """Abstract DB test case."""
-
-    def setUp(self):
-        """Patch CQLClient."""
-        self.client = mock.create_autospec(CQLClient)
-
-
 class TestBobbyWorker(unittest.TestCase):
     """Test bobby.worker.BobbyWorker."""
 
     def setUp(self):
-        """Patch CQLClient."""
-        self.db = mock.create_autospec(CQLClient)
+        """Mock CQLClient and MaasClient."""
+        self.client = mock.create_autospec(CQLClient)
 
-    @mock.patch('bobby.worker.ele.fetch_entity_by_uuid')
-    def test_create_server_entity(self, fetch_entity_by_uuid):
-        """Test BobbyWorker.create_server_entity."""
-        #TODO: implement this.
+        self.maas_client = mock.create_autospec(MaasClient)
+        patcher = mock.patch('bobby.worker.MaasClient')
+        self.addCleanup(patcher.stop)
+        _MaasClient = patcher.start()
+        _MaasClient.return_value = self.maas_client
+
+    @mock.patch('bobby.worker.cass')
+    def test_create_server(self, cass):
+        cass.create_server.return_value = defer.succeed(None)
+        self.maas_client.create_entity.return_value = defer.succeed('entity-abc')
+        server = {'uri': 'http://example.com/server-abc'}
+
+        w = worker.BobbyWorker(self.client)
+        d = w.create_server('tenant-abc', 'group-def', server)
+        self.successResultOf(d)
+
+        self.maas_client.create_entity.assert_called_once_with(server)
+        cass.create_server.assert_called_once_with(
+            self.client, 'tenant-abc', server['uri'], 'entity-abc', 'group-def')
 
     @mock.patch('bobby.worker.MaasClient')
     def test_apply_policies_to_server(self, FakeMaasClient):
@@ -63,9 +70,9 @@ class TestBobbyWorker(unittest.TestCase):
             'details': {'file': 'blah',
                         'args': 'blah'}
         })
-        self.db.execute.return_value = defer.succeed(None)
+        self.client.execute.return_value = defer.succeed(None)
 
-        w = worker.BobbyWorker(self.db)
+        w = worker.BobbyWorker(self.client)
         d = w.add_policy_to_server('t1', 'p1', 's1', 'enOne',
                                    example_check_template, "ALARM_DSL", "npBlah")
 
@@ -76,7 +83,7 @@ class TestBobbyWorker(unittest.TestCase):
             'p1', 'enOne',
             '{"type": "agent.plugin", "details": {"args": "blah", "file": "blah"}}')
 
-        self.db.execute.assert_called_once_with(
+        self.client.execute.assert_called_once_with(
             'INSERT INTO serverpolicies ("serverId", "policyId", "alarmId", '
             '"checkId", state) VALUES (:serverId, :policyId, :alarmId, '
             ':checkId, false);',
@@ -104,9 +111,9 @@ class TestBobbyWorker(unittest.TestCase):
                 return defer.succeed(None)
             elif 'SELECT' in query:
                 return defer.succeed([expected])
-        self.db.execute.side_effect = execute
+        self.client.execute.side_effect = execute
 
-        w = worker.BobbyWorker(self.db)
+        w = worker.BobbyWorker(self.client)
         d = w.create_group('101010', 'g1')
 
         result = self.successResultOf(d)
@@ -127,7 +134,7 @@ class TestBobbyWorker(unittest.TestCase):
                 'SELECT * FROM groups WHERE "tenantId"=:tenantId AND '
                 '"groupId"=:groupId;',
                 {'groupId': '101010', 'tenantId': 'g1'}, 1)]
-        self.assertEqual(self.db.execute.mock_calls, calls)
+        self.assertEqual(self.client.execute.mock_calls, calls)
 
     @mock.patch('bobby.worker.MaasClient')
     def test_add_policy_to_server(self, FakeMaasClient):
@@ -171,14 +178,14 @@ class TestBobbyWorker(unittest.TestCase):
                 return defer.succeed(None)
             elif 'SELECT' in query:
                 return defer.succeed(expected)
-        self.db.execute.side_effect = execute
+        self.client.execute.side_effect = execute
 
-        w = worker.BobbyWorker(self.db)
+        w = worker.BobbyWorker(self.client)
         d = w.apply_policies_to_server('101010', 'group-abc', 'server1', 'enOne', 'npBlah')
         result = self.successResultOf(d)
         self.assertEqual(result, None)
 
-        self.assertEqual(self.db.execute.mock_calls, [
+        self.assertEqual(self.client.execute.mock_calls, [
             mock.call(
                 'SELECT * FROM policies WHERE "groupId"=:groupId;',
                 {'groupId': 'group-abc'}, 1),

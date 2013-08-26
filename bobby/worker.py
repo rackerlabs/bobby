@@ -3,7 +3,7 @@ Functions for actually doing things
 """
 
 from twisted.internet import defer
-from bobby import ele, cass
+from bobby import cass
 from bobby.ele import MaasClient
 
 
@@ -13,13 +13,28 @@ class BobbyWorker(object):
     def __init__(self, db):
         self._db = db
 
-    # TODO: This is now untested. That's okay, because it's what this branch is
-    # all about.
-    def create_server_entity(self, tenant_id, policy_id, server_id):
-        """ Creates a server's entity in MaaS """
-        ele.fetch_entity_by_uuid(tenant_id, policy_id, server_id)
-        self.apply_policies_to_server(tenant_id, server_id)
-        return defer.succeed(None)
+    def _get_maas_client(self):
+        # TODO: get the service catalog and auth token.
+        return MaasClient({}, 'abc')
+
+    def create_server(self, tenant_id, group_id, server):
+        """Create a server, register it with MaaS."""
+        maas_client = self._get_maas_client()
+        d = maas_client.create_entity(server)
+
+        def create_server_record(entity_id):
+            return cass.create_server(self._db, tenant_id, server.get('uri'), entity_id, group_id)
+        d.addCallback(create_server_record)
+
+        def add_checks_and_alarms(_):
+            # TODO: implement this.
+            return defer.succeed(None)
+        d.addCallback(add_checks_and_alarms)
+
+        def add_policies_to_server(server):
+            # TODO: implement this.
+            return defer.succeed(server)
+        return d.addCallback(add_policies_to_server)
 
     def apply_policies_to_server(self, tenant_id, group_id, server_id, entity_id, nplan_id):
         """ Apply policies to a new server """
