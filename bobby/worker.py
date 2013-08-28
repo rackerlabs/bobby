@@ -58,8 +58,7 @@ class BobbyWorker(object):
 
     def create_group(self, tenant_id, group_id):
         """ Create a group """
-        # TODO: get the service catalog and auth token
-        maas_client = MaasClient({}, 'abc')
+        maas_client = self._get_maas_client()
         d = maas_client.add_notification_and_plan()
 
         def create_group((notification_id, notification_plan_id)):
@@ -84,8 +83,7 @@ class BobbyWorker(object):
     def add_policy_to_server(self, tenant_id, policy_id, server_id, entity_id, check_template, alarm_template,
                              nplan_id):
         """Adds a single policy to a server"""
-        # TODO: get the service catalog and auth token
-        maas_client = MaasClient({}, 'abc')
+        maas_client = self._get_maas_client()
         d = maas_client.add_check(policy_id, entity_id, check_template)
 
         def add_alarm(check):
