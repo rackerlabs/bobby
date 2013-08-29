@@ -25,6 +25,17 @@ class TestBobbyWorker(unittest.TestCase):
 
     @mock.patch('bobby.worker.cass')
     def test_create_server(self, cass):
+        cass.get_server_by_server_id.return_value = defer.succeed({
+            'serverId': 'server-abc', 'entityId': 'entity-abc'})
+        cass.get_group_by_id.return_value = defer.succeed({
+            'notificationPlan': 'plan-xyz'})
+        cass.get_policies_by_group_id.return_value = defer.succeed([{
+            'policyId': 'policy-abc',
+            'checkTemplate': 'check-abc',
+            'alarmTemplate': 'alarm-def'}])
+        self.maas_client.add_check.return_value = defer.succeed({'id': 'check-xyz'})
+        self.maas_client.add_alarm.return_value = defer.succeed({'id': 'alarm-xyz'})
+
         cass.create_server.return_value = defer.succeed(None)
         self.maas_client.create_entity.return_value = defer.succeed('entity-abc')
         server = {'uri': 'http://example.com/server-abc'}
@@ -36,6 +47,9 @@ class TestBobbyWorker(unittest.TestCase):
         self.maas_client.create_entity.assert_called_once_with(server)
         cass.create_server.assert_called_once_with(
             self.client, 'tenant-abc', server['uri'], 'entity-abc', 'group-def')
+
+        cass.get_server_by_server_id.assert_called_once_with('http://example.com/server-abc')
+        cass.register_policy_on_server.assert_called_once_with(self.client, 'policy-abc', 'server-abc', 'alarm-xyz', 'check-xyz')
 
     @mock.patch('bobby.worker.MaasClient')
     def test_apply_policies_to_server(self, FakeMaasClient):
@@ -177,15 +191,24 @@ class TestBobbyWorker(unittest.TestCase):
             if 'INSERT' in query:
                 return defer.succeed(None)
             elif 'SELECT' in query:
-                return defer.succeed(expected)
+                if 'groups' in query:
+                    return defer.succeed([{
+                        'groupId': 'group-abc',
+                        'notificationPlan': 'plan-abc'}])
+                elif 'policies' in query:
+                    return defer.succeed(expected)
         self.client.execute.side_effect = execute
 
         w = worker.BobbyWorker(self.client)
-        d = w.apply_policies_to_server('101010', 'group-abc', 'server1', 'enOne', 'npBlah')
+        d = w.apply_policies_to_server('101010', 'group-abc', 'server1', 'enOne')
         result = self.successResultOf(d)
         self.assertEqual(result, None)
 
         self.assertEqual(self.client.execute.mock_calls, [
+            mock.call(
+                'SELECT * FROM groups WHERE "tenantId"=:tenantId AND "groupId"=:groupId;',
+                {'groupId': 'group-abc', 'tenantId': '101010'},
+                1),
             mock.call(
                 'SELECT * FROM policies WHERE "groupId"=:groupId;',
                 {'groupId': 'group-abc'}, 1),

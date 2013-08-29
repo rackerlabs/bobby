@@ -26,29 +26,36 @@ class BobbyWorker(object):
             return cass.create_server(self._db, tenant_id, server.get('uri'), entity_id, group_id)
         d.addCallback(create_server_record)
 
-        def add_checks_and_alarms(_):
-            # TODO: implement this.
-            return defer.succeed(None)
-        d.addCallback(add_checks_and_alarms)
+        def get_server(_):
+            return cass.get_server_by_server_id(server.get('uri'))
+        d.addCallback(get_server)
 
-        def add_policies_to_server(server):
-            # TODO: implement this.
-            return defer.succeed(server)
-        return d.addCallback(add_policies_to_server)
+        def apply_policies(server):
+            return self.apply_policies_to_server(
+                tenant_id, group_id, server['serverId'], server['entityId'])
+        return d.addCallback(apply_policies)
 
-    def apply_policies_to_server(self, tenant_id, group_id, server_id, entity_id, nplan_id):
+    def apply_policies_to_server(self, tenant_id, group_id, server_id, entity_id):
         """ Apply policies to a new server """
-        d = cass.get_policies_by_group_id(self._db, group_id)
+        group = []
+        d = cass.get_group_by_id(self._db, tenant_id, group_id)
+
+        def get_policies(_group):
+            group.append(_group)
+            return cass.get_policies_by_group_id(self._db, group_id)
+        d.addCallback(get_policies)
 
         def proc_policies(policies):
             deferreds = [
-                self.add_policy_to_server(tenant_id, policy['policyId'], server_id, entity_id,
-                                          policy['checkTemplate'], policy['alarmTemplate'], nplan_id)
+                self.add_policy_to_server(
+                    tenant_id, policy['policyId'], server_id, entity_id,
+                    policy['checkTemplate'], policy['alarmTemplate'],
+                    group[0]['notificationPlan'])
                 for policy in policies
             ]
             return defer.gatherResults(deferreds, consumeErrors=False)
         d.addCallback(proc_policies)
-        d.addCallback(lambda _: None)
+        d.addCallback(lambda _: defer.succeed(None))
         return d
 
     # Commented out so as to not screw up lint
