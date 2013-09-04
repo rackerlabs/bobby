@@ -39,6 +39,55 @@ class ViewTest(unittest.TestCase):
         self.worker = mock.create_autospec(BobbyWorker)
         self.bobby._worker = self.worker
 
+    def test_create_server(self):
+        """POSTing application/json creates a server."""
+        expected = {
+            'entityId': 'entity-xyz',
+            'groupId': 'group-uvw',
+            'links': [
+                {
+                    'href': '/101010/groups/group-uvw/servers/server-rst',
+                    'rel': 'self'
+                }
+            ],
+            'serverId': 'server-rst',
+        }
+        server = expected.copy()
+        del server['links']
+        self.worker.create_server.return_value = defer.succeed(server)
+
+        request_json = {
+            'entityId': 'entity-xyz',
+            'serverId': 'server-rst',
+            'serverPolicies': [
+                {'policyId': 'policy-xyz',
+                 'alarmId': 'alarm-rst',
+                 'checkId': 'check-uvw'}
+            ]
+        }
+        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/',
+                                    content=json.dumps(request_json))
+        request.method = 'POST'
+
+        d = self.bobby.create_server(request, '101010', server['groupId'])
+
+        self.successResultOf(d)
+        result = json.loads(request.written[0])
+        self.assertEqual(result, expected)
+
+    def test_delete_server(self):
+        """Deletes a server and returns 402."""
+        self.worker.delete_server.return_value = defer.succeed(None)
+
+        request = BobbyDummyRequest('/101010/groups/uvwxyz/servers/opqrst')
+        request.method = 'DELETE'
+        d = self.bobby.delete_server(request, '101010', 'uvwxyz', 'opqrst')
+
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 204)
+        self.worker.delete_server.assert_called_once_with(
+            '101010', 'uvwxyz', 'opqrst')
+
 
 class TestGetGroups(ViewTest):
     """Test GET /{tenantId}/groups"""
@@ -202,46 +251,6 @@ class TestGetServers(ViewTest):
         self.assertEqual(result, expected)
 
 
-class TestCreateServer(ViewTest):
-    """Test POST /{tenantId}/groups"""
-
-    def test_create_server(self):
-        """POSTing application/json creates a server."""
-        expected = {
-            'entityId': 'entity-xyz',
-            'groupId': 'group-uvw',
-            'links': [
-                {
-                    'href': '/101010/groups/group-uvw/servers/server-rst',
-                    'rel': 'self'
-                }
-            ],
-            'serverId': 'server-rst',
-        }
-        server = expected.copy()
-        del server['links']
-        self.worker.create_server.return_value = defer.succeed(server)
-
-        request_json = {
-            'entityId': 'entity-xyz',
-            'serverId': 'server-rst',
-            'serverPolicies': [
-                {'policyId': 'policy-xyz',
-                 'alarmId': 'alarm-rst',
-                 'checkId': 'check-uvw'}
-            ]
-        }
-        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/',
-                                    content=json.dumps(request_json))
-        request.method = 'POST'
-
-        d = self.bobby.create_server(request, '101010', server['groupId'])
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
-
-
 class TestGetServer(ViewTest):
     """Test GET /{tenantId}/groups/{groupId}/servers/{serverId}"""
 
@@ -269,22 +278,6 @@ class TestGetServer(ViewTest):
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
-
-
-class TestDeleteServer(ViewTest):
-    """Test DELETE /{tenantId}/groups/{groupId}/servers/{serverId}"""
-
-    @mock.patch('bobby.cass.delete_server')
-    def test_delete_server(self, delete_server):
-        """Deletes a server and returns 402."""
-        delete_server.return_value = defer.succeed(None)
-
-        request = BobbyDummyRequest('/101010/groups/uvwxyz/servers/opqrst')
-        d = self.bobby.delete_server(request, '101010', 'uvwxyz', 'opqrst')
-
-        self.successResultOf(d)
-        self.assertEqual(request.responseCode, 204)
-        delete_server.assert_called_once_with(self.db, '101010', 'uvwxyz', 'opqrst')
 
 
 class TestGetPolicies(ViewTest):

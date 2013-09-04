@@ -226,10 +226,7 @@ class Bobby(object):
         :param str group_id: A groud id
         :param str server_id: A server id
         """
-        d = cass.delete_server(self._db, tenant_id, group_id, server_id)
-
-        # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
-        # here...
+        d = self._worker.delete_server(tenant_id, group_id, server_id)
 
         def finish(_):
             request.setHeader('Content-Type', 'application/json')

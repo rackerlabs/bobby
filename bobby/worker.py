@@ -37,7 +37,7 @@ class BobbyWorker(object):
 
     def delete_server(self, tenant_id, group_id, server_id):
         """ Clean up a server's records """
-        d = cass.get_server_by_server_id(server_id)
+        d = cass.get_server_by_server_id(self._db, tenant_id, group_id, server_id)
 
         def delete_entity(result):
             maas_client = self._get_maas_client()
@@ -46,7 +46,7 @@ class BobbyWorker(object):
         d.addCallback(delete_entity)
 
         def delete_server_from_db(_):
-            return cass.delete_server(server_id)
+            return cass.delete_server(self._db, tenant_id, group_id, server_id)
         d.addCallback(delete_server_from_db)
 
         return d

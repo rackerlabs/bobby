@@ -62,9 +62,11 @@ class TestBobbyWorker(unittest.TestCase):
         d = w.delete_server('tenant-abc', 'group-def', 'server-abc')
         self.successResultOf(d)
 
-        cass.get_server_by_server_id.assert_called_once_with('server-abc')
+        cass.get_server_by_server_id.assert_called_once_with(
+            self.client, 'tenant-abc', 'group-def', 'server-abc')
         self.maas_client.delete_entity.assert_called_once_with('entity-abc')
-        cass.delete_server.assert_called_once_with('server-abc')
+        cass.delete_server.assert_called_once_with(
+            self.client, 'tenant-abc', 'group-def', 'server-abc')
 
     @mock.patch('bobby.worker.MaasClient')
     def test_apply_policies_to_server(self, FakeMaasClient):
