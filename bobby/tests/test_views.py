@@ -89,49 +89,6 @@ class ViewTest(unittest.TestCase):
             '101010', 'uvwxyz', 'opqrst')
 
 
-class TestGetGroups(ViewTest):
-    """Test GET /{tenantId}/groups"""
-
-    @mock.patch('bobby.cass.get_groups_by_tenant_id')
-    def test_get_groups(self, get_groups_by_tenant_id):
-        """Returns application/json of all groups."""
-        groups = [
-            {'groupId': 'abcdef',
-             'links': [
-                 {
-                     'href': '/101010/groups/abcdef',
-                     'rel': 'self'
-                 }
-             ],
-             'notification': 'notification-ghi',
-             'notificationPlan': 'notificationPlan-jkl',
-             'tenantId': '101010'
-             },
-
-            {'groupId': 'fedcba',
-             'links': [
-                 {
-                     'href': '/101010/groups/fedcba',
-                     'rel': 'self'
-                 }
-             ],
-             'notification': 'notification-igh',
-             'notificationPlan': 'notificationPlan-lkj',
-             'tenantId': '101010'
-             }
-        ]
-        expected = {'groups': groups}
-        get_groups_by_tenant_id.return_value = defer.succeed(groups)
-
-        request = BobbyDummyRequest('/101010/groups')
-        d = self.bobby.get_groups(request, '101010')
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
-        get_groups_by_tenant_id.assert_called_once_with(self.db, '101010')
-
-
 class TestCreateGroup(ViewTest):
     """Test POST /{tenantId}/groups"""
 
@@ -170,34 +127,6 @@ class TestCreateGroup(ViewTest):
             self.db, '010101', 'uvwxyz', 'notification-abc', 'notification-def')
 
 
-class TestGetGroup(ViewTest):
-    """Test GET /{tenantId}/groups/{groupId}"""
-
-    @mock.patch('bobby.cass.get_group_by_id')
-    def test_get_group(self, get_group_by_id):
-        """Returns application/json of group representation."""
-        expected = {
-            'groupId': 'uvwxyz',
-            'links': [{
-                'href': '/101010/groups/uvwxyz',
-                'rel': 'self'
-            }],
-            'notification': 'notification-abc',
-            'notificationPlan': 'notification-def',
-            'tenantId': 'tenant-ghi'
-        }
-        group = expected.copy()
-        del group['links']
-        get_group_by_id.return_value = defer.succeed(group)
-
-        request = BobbyDummyRequest('/101010/groups/uvwxyz')
-        d = self.bobby.get_group(request, '101010', 'uvwxyz')
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
-
-
 class TestDeleteGroup(ViewTest):
     """Test DELETE /{tenantId}/groups/{groupId}"""
 
@@ -212,117 +141,6 @@ class TestDeleteGroup(ViewTest):
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
         delete_group.assert_called_once_with(self.db, '101010', 'uvwxyz')
-
-
-class TestGetServers(ViewTest):
-    """Test GET /{tenantId}/groups/{groupId}."""
-
-    @mock.patch('bobby.cass.get_servers_by_group_id')
-    def test_get_servers(self, get_servers_by_group_id):
-        """Returns application/json of all servers owned by a group."""
-        servers = [
-            {'entityId': 'entity-abc',
-             'groupId': 'group-def',
-             'links': [
-                 {
-                     'href': '/101010/groups/group-def/servers/server-ghi',
-                     'rel': 'self'
-                 }
-             ],
-             'serverId': 'server-ghi'},
-            {'entityId': 'entity-jkl',
-             'groupId': 'group-def',
-             'links': [
-                 {
-                     'href': '/101010/groups/group-def/servers/server-mno',
-                     'rel': 'self'
-                 }
-             ],
-             'serverId': 'server-mno'},
-        ]
-        expected = {'servers': servers}
-        get_servers_by_group_id.return_value = defer.succeed(servers)
-
-        request = BobbyDummyRequest('/101010/groups/group-def/servers')
-        d = self.bobby.get_servers(request, '101010', 'group-def')
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
-
-
-class TestGetServer(ViewTest):
-    """Test GET /{tenantId}/groups/{groupId}/servers/{serverId}"""
-
-    @mock.patch('bobby.cass.get_server_by_server_id')
-    def test_get_server(self, get_server_by_server_id):
-        """Return application/json server representation."""
-        expected = {
-            'entityId': 'entity-xyz',
-            'groupId': 'group-uvw',
-            'links': [
-                {
-                    'href': '/101010/groups/group-uvw/servers/server-rst',
-                    'rel': 'self'
-                }
-            ],
-            'serverId': 'server-rst'
-        }
-        server = expected.copy()
-        del server['links']
-        get_server_by_server_id.return_value = defer.succeed(server)
-
-        request = BobbyDummyRequest('/101010/groups/group-uvw/servers/server-rst')
-        d = self.bobby.get_server(request, '101010', server['groupId'], server['serverId'])
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
-
-
-class TestGetPolicies(ViewTest):
-    """Test GET /{tenantId}/groups/{groupId}."""
-
-    @mock.patch('bobby.cass.get_policies_by_group_id')
-    def test_get_policies(self, get_policies_by_group_id):
-        """Returns application/json of all policies owned by a group."""
-        policies = [
-            {
-                'alarmTemplate': '{alarmTemplate1}',
-                'checkTemplate': '{checkTemplate1}',
-                'groupId': '{groupId}',
-                'links': [
-                    {
-                        'href':
-                        '{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId1}',
-                        'rel': 'self'
-                    }
-                ],
-                'policyId': '{policyId1}'
-            },
-            {
-                'alarmTemplate': '{alarmTemplate2}',
-                'checkTemplate': '{checkTemplate2}',
-                'groupId': '{groupId}',
-                'links': [
-                    {
-                        'href':
-                        '{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId2}',
-                        'rel': 'self'
-                    }
-                ],
-                'policyId': '{policyId2}'
-            }
-        ]
-        expected = {'policies': policies}
-        get_policies_by_group_id.return_value = defer.succeed(policies)
-
-        request = BobbyDummyRequest('/101010/groups/group-def/policies')
-        d = self.bobby.get_policies(request, '101010', 'group-def')
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
 
 
 class TestCreatePolicy(ViewTest):
@@ -358,37 +176,6 @@ class TestCreatePolicy(ViewTest):
         request.method = 'POST'
 
         d = self.bobby.create_policy(request, '101010', policy['groupId'])
-
-        self.successResultOf(d)
-        result = json.loads(request.written[0])
-        self.assertEqual(result, expected)
-
-
-class TestGetPolicy(ViewTest):
-    """Test GET /{tenantId}/groups/{groupId}/policies/{serverId}"""
-
-    @mock.patch('bobby.cass.get_policy_by_policy_id')
-    def test_get_server(self, get_policy_by_policy_id):
-        """Return application/json policy representation."""
-        expected = {
-            'alarmTemplate': 'alarm-template-jkl',
-            'checkTemplate': 'check-template-ghi',
-            'groupId': 'group-def',
-            'links': [
-                {
-                    'href':
-                    '/101010/groups/group-def/policies/policy-abc',
-                    'rel': 'self'
-                }
-            ],
-            'policyId': 'policy-abc'
-        }
-        policy = expected.copy()
-        del policy['links']
-        get_policy_by_policy_id.return_value = defer.succeed(policy)
-
-        request = BobbyDummyRequest('/101010/groups/group-def/policies/policy-abc')
-        d = self.bobby.get_policy(request, '101010', policy['groupId'], policy['policyId'])
 
         self.successResultOf(d)
         result = json.loads(request.written[0])
