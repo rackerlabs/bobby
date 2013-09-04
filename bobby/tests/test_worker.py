@@ -46,6 +46,25 @@ class TestBobbyWorker(unittest.TestCase):
             self.client, '101010', 'group-abc', 'notification-def', 'notificationPlan-ghi')
 
     @mock.patch('bobby.worker.cass')
+    def test_delete_group(self, cass):
+        """Test BobbyWorker.delete_group."""
+        cass.get_group_by_id.return_value = defer.succeed({
+            'notification': 'notification-abc',
+            'notificationPlan': 'notificationPlan-def'})
+        self.maas_client.remove_notification_and_plan.return_value = defer.succeed(None)
+        cass.delete_group.return_value = defer.succeed(None)
+
+        w = worker.BobbyWorker(self.client)
+        d = w.delete_group('tenant-abc', 'group-def')
+        self.successResultOf(d)
+
+        cass.get_group_by_id.assert_called_once_with(self.client, 'tenant-abc', 'group-def')
+        self.maas_client.remove_notification_and_plan.assert_called_once_with(
+            'notification-abc', 'notificationPlan-def')
+        cass.delete_group.assert_called_once_with(
+            self.client, 'tenant-abc', 'group-def')
+
+    @mock.patch('bobby.worker.cass')
     def test_create_server(self, cass):
         cass.get_server_by_server_id.return_value = defer.succeed({
             'serverId': 'server-abc', 'entityId': 'entity-abc'})

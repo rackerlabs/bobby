@@ -29,6 +29,21 @@ class BobbyWorker(object):
 
         return d
 
+    def delete_group(self, tenant_id, group_id):
+        d = cass.get_group_by_id(self._db, tenant_id, group_id)
+
+        def remove_notification(group):
+            maas_client = self._get_maas_client()
+            return maas_client.remove_notification_and_plan(
+                group['notification'], group['notificationPlan'])
+        d.addCallback(remove_notification)
+
+        def delete_group_from_db(_):
+            return cass.delete_group(self._db, tenant_id, group_id)
+        d.addCallback(delete_group_from_db)
+
+        return d
+
     def create_server(self, tenant_id, group_id, server):
         """Create a server, register it with MaaS."""
         maas_client = self._get_maas_client()

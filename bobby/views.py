@@ -82,7 +82,7 @@ class Bobby(object):
         :param str tenant_id: A tenant id
         :param str group_id: A groud id
         """
-        d = cass.delete_group(self._db, tenant_id, group_id)
+        d = self._worker.delete_group(tenant_id, group_id)
 
         def finish(_):
             request.setHeader('Content-Type', 'application/json')

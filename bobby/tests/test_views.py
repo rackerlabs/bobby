@@ -88,8 +88,7 @@ class ViewTest(unittest.TestCase):
         self.worker.delete_server.assert_called_once_with(
             '101010', 'uvwxyz', 'opqrst')
 
-    @mock.patch('bobby.cass.create_group')
-    def test_create_group(self, create_group):
+    def test_create_group(self):
         """POST to /{tenantId}/groups creates a new group."""
         expected = {
             'groupId': 'uvwxyz',
@@ -121,21 +120,16 @@ class ViewTest(unittest.TestCase):
         self.assertEqual(result, expected)
         self.worker.create_group.assert_called_once_with('010101', 'uvwxyz')
 
-
-class TestDeleteGroup(ViewTest):
-    """Test DELETE /{tenantId}/groups/{groupId}"""
-
-    @mock.patch('bobby.cass.delete_group')
-    def test_delete_group(self, delete_group):
+    def test_delete_group(self):
         """Deletes a server, returning a 204."""
-        delete_group.return_value = defer.succeed(None)
+        self.worker.delete_group.return_value = defer.succeed(None)
 
         request = BobbyDummyRequest('/101010/groups/uvwxyz')
         d = self.bobby.delete_group(request, '101010', 'uvwxyz')
 
         self.successResultOf(d)
         self.assertEqual(request.responseCode, 204)
-        delete_group.assert_called_once_with(self.db, '101010', 'uvwxyz')
+        self.worker.delete_group.assert_called_once_with('101010', 'uvwxyz')
 
 
 class TestCreatePolicy(ViewTest):
