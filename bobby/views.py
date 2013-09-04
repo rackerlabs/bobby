@@ -53,10 +53,8 @@ class Bobby(object):
         """
         content = json.loads(request.content.read())
         group_id = content.get('groupId')
-        notification = content.get('notification')
-        notification_plan = content.get('notificationPlan')
 
-        d = cass.create_group(self._db, tenant_id, group_id, notification, notification_plan)
+        d = self._worker.create_group(tenant_id, group_id)
 
         def _serialize_object(group):
             # XXX: the actual way to do this is using a json encoder. Not now.

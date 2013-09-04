@@ -88,10 +88,6 @@ class ViewTest(unittest.TestCase):
         self.worker.delete_server.assert_called_once_with(
             '101010', 'uvwxyz', 'opqrst')
 
-
-class TestCreateGroup(ViewTest):
-    """Test POST /{tenantId}/groups"""
-
     @mock.patch('bobby.cass.create_group')
     def test_create_group(self, create_group):
         """POST to /{tenantId}/groups creates a new group."""
@@ -107,7 +103,7 @@ class TestCreateGroup(ViewTest):
         }
         group = expected.copy()
         del group['links']
-        create_group.return_value = defer.succeed(group)
+        self.worker.create_group.return_value = defer.succeed(group)
 
         request_json = {
             'groupId': 'uvwxyz',
@@ -123,8 +119,7 @@ class TestCreateGroup(ViewTest):
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
-        create_group.assert_called_once_with(
-            self.db, '010101', 'uvwxyz', 'notification-abc', 'notification-def')
+        self.worker.create_group.assert_called_once_with('010101', 'uvwxyz')
 
 
 class TestDeleteGroup(ViewTest):

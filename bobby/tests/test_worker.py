@@ -24,6 +24,28 @@ class TestBobbyWorker(unittest.TestCase):
         _MaasClient.return_value = self.maas_client
 
     @mock.patch('bobby.worker.cass')
+    def test_create_group(self, cass):
+        """Test BobbyWorker.create_group."""
+        expected = {'groupId': 'group-abc',
+                    'tenantId': '101010',
+                    'notification': 'notification-def',
+                    'notificationPlan': 'notificationPlan-ghi'}
+
+        self.maas_client.add_notification_and_plan.return_value = defer.succeed(
+            (expected['notification'], expected['notificationPlan']))
+        cass.create_group.return_value = defer.succeed(expected)
+
+        w = worker.BobbyWorker(self.client)
+        d = w.create_group(expected['tenantId'], expected['groupId'])
+
+        result = self.successResultOf(d)
+        self.assertEqual(result, expected)
+
+        self.maas_client.add_notification_and_plan.assert_called_once_with()
+        cass.create_group.assert_called_once_with(
+            self.client, '101010', 'group-abc', 'notification-def', 'notificationPlan-ghi')
+
+    @mock.patch('bobby.worker.cass')
     def test_create_server(self, cass):
         cass.get_server_by_server_id.return_value = defer.succeed({
             'serverId': 'server-abc', 'entityId': 'entity-abc'})
@@ -121,51 +143,6 @@ class TestBobbyWorker(unittest.TestCase):
             {'checkId': u'check-abc', 'serverId': 's1', 'policyId': 'p1',
              'alarmId': 'alAAAA'},
             1)
-
-    @mock.patch('bobby.worker.MaasClient')
-    def test_create_group(self, FakeMaasClient):
-        """Test BobbyWorker.create_group."""
-        maas_client = mock.create_autospec(MaasClient)
-        maas_client._endpoint = 'http://0.0.0.0/'
-        maas_client._auth_token = 'auth-xyz'
-        maas_client.add_notification_and_plan.return_value = defer.succeed(
-            ('notification-xyz', 'notificationPlan-abc'))
-        FakeMaasClient.return_value = maas_client
-
-        expected = {'groupId': 'g1',
-                    'tenantId': '101010',
-                    'notification': 'ntBlah',
-                    'notificationPlan': 'npBlah'}
-
-        def execute(query, data, consistency):
-            if 'INSERT' in query:
-                return defer.succeed(None)
-            elif 'SELECT' in query:
-                return defer.succeed([expected])
-        self.client.execute.side_effect = execute
-
-        w = worker.BobbyWorker(self.client)
-        d = w.create_group('101010', 'g1')
-
-        result = self.successResultOf(d)
-        self.assertEqual(result, expected)
-
-        maas_client.add_notification_and_plan.assert_called_once_with()
-        calls = [
-            mock.call(
-                'INSERT INTO groups ("tenantId", "groupId", "notification", '
-                '"notificationPlan") VALUES (:tenantId, :groupId, '
-                ':notification, :notificationPlan);',
-                {'notificationPlan': 'notificationPlan-abc',
-                 'notification': 'notification-xyz',
-                 'groupId': '101010',
-                 'tenantId': 'g1'},
-                1),
-            mock.call(
-                'SELECT * FROM groups WHERE "tenantId"=:tenantId AND '
-                '"groupId"=:groupId;',
-                {'groupId': '101010', 'tenantId': 'g1'}, 1)]
-        self.assertEqual(self.client.execute.mock_calls, calls)
 
     @mock.patch('bobby.worker.MaasClient')
     def test_add_policy_to_server(self, FakeMaasClient):

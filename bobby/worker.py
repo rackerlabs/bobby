@@ -17,6 +17,18 @@ class BobbyWorker(object):
         # TODO: get the service catalog and auth token.
         return MaasClient({}, 'abc')
 
+    def create_group(self, tenant_id, group_id):
+        """Create a group, and register a notification and notification plan."""
+        maas_client = self._get_maas_client()
+        d = maas_client.add_notification_and_plan()
+
+        def create_group_in_db((notification, notification_plan)):
+            return cass.create_group(
+                self._db, tenant_id, group_id, notification, notification_plan)
+        d.addCallback(create_group_in_db)
+
+        return d
+
     def create_server(self, tenant_id, group_id, server):
         """Create a server, register it with MaaS."""
         maas_client = self._get_maas_client()
@@ -73,15 +85,6 @@ class BobbyWorker(object):
         d.addCallback(proc_policies)
         d.addCallback(lambda _: defer.succeed(None))
         return d
-
-    def create_group(self, tenant_id, group_id):
-        """ Create a group """
-        maas_client = self._get_maas_client()
-        d = maas_client.add_notification_and_plan()
-
-        def create_group((notification_id, notification_plan_id)):
-            return cass.create_group(self._db, group_id, tenant_id, notification_id, notification_plan_id)
-        return d.addCallback(create_group)
 
     def apply_policy(self, tenant_id, group_id, policy_id, check_template, alarm_template, nplan_id):
         """Apply a new policy accross a group of servers"""

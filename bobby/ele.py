@@ -81,6 +81,7 @@ Scale.
         notification_id = []
 
         # TODO: Finish this path to the webhook
+        # TODO: Add the group to the label.
         notification_data = {
             'label': 'Auto Scale Webhook Notification',
             'type': 'webhook',
