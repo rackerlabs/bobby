@@ -80,6 +80,24 @@ class TestMaasClient(unittest.TestCase):
         )
 
     @mock.patch('bobby.ele.treq')
+    def test_delete_entity(self, treq):
+        def delete(url, headers):
+            response = mock.Mock()
+            response.code = 204
+            return defer.succeed(response)
+        treq.delete.side_effect = delete
+
+        d = self.client.delete_entity('entity-abc')
+        self.successResultOf(d)
+
+        treq.delete.assert_called_once_with(
+            'https://monitoring.api.rackspacecloud.com/v1.0/101010/entities/entity-abc',
+            headers={'content-type': ['application/json'],
+                     'accept': ['application/json'],
+                     'x-auth-token': ['auth-abc']}
+        )
+
+    @mock.patch('bobby.ele.treq')
     def test_add_notification_and_plan(self, treq):
         """A notification and notification are created."""
         def post(url, headers, data):

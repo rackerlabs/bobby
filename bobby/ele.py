@@ -63,6 +63,14 @@ class MaasClient(object):
             return defer.succeed(entity_id)
         return d.addCallback(parse_response)
 
+    def delete_entity(self, entity_id):
+        entity_url = http.append_segments(self._endpoint, 'entities', entity_id)
+
+        d = treq.delete(entity_url,
+                        headers=http.headers(self._auth_token))
+        d.addCallback(http.check_success, [204])
+        return d
+
     def add_notification_and_plan(self):
         """Groups must have a Notification and Notification plan for Auto
 Scale.
