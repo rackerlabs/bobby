@@ -51,6 +51,21 @@ class TestBobbyWorker(unittest.TestCase):
         cass.get_server_by_server_id.assert_called_once_with('http://example.com/server-abc')
         cass.register_policy_on_server.assert_called_once_with(self.client, 'policy-abc', 'server-abc', 'alarm-xyz', 'check-xyz')
 
+    @mock.patch('bobby.worker.cass')
+    def test_delete_server(self, cass):
+        cass.delete_server.return_value = defer.succeed(None)
+        cass.get_server_by_server_id.return_value = defer.succeed({
+            'serverId': 'server-abc', 'entityId': 'entity-abc'})
+        self.maas_client.delete_entity.return_value = defer.succeed(None)
+
+        w = worker.BobbyWorker(self.client)
+        d = w.delete_server('tenant-abc', 'group-def', 'server-abc')
+        self.successResultOf(d)
+
+        cass.get_server_by_server_id.assert_called_once_with('server-abc')
+        self.maas_client.delete_entity.assert_called_once_with('entity-abc')
+        cass.delete_server.assert_called_once_with('server-abc')
+
     @mock.patch('bobby.worker.MaasClient')
     def test_apply_policies_to_server(self, FakeMaasClient):
         """Test BobbyWorker.apply_policies_to_server."""

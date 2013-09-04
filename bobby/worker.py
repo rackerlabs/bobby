@@ -35,6 +35,22 @@ class BobbyWorker(object):
                 tenant_id, group_id, server['serverId'], server['entityId'])
         return d.addCallback(apply_policies)
 
+    def delete_server(self, tenant_id, group_id, server_id):
+        """ Clean up a server's records """
+        d = cass.get_server_by_server_id(server_id)
+
+        def delete_entity(result):
+            maas_client = self._get_maas_client()
+            d = maas_client.delete_entity(result['entityId'])
+            return d
+        d.addCallback(delete_entity)
+
+        def delete_server_from_db(_):
+            return cass.delete_server(server_id)
+        d.addCallback(delete_server_from_db)
+
+        return d
+
     def apply_policies_to_server(self, tenant_id, group_id, server_id, entity_id):
         """ Apply policies to a new server """
         group = []
@@ -57,11 +73,6 @@ class BobbyWorker(object):
         d.addCallback(proc_policies)
         d.addCallback(lambda _: defer.succeed(None))
         return d
-
-    # Commented out so as to not screw up lint
-    #def remove_server(tenant_id, server_id):
-    #   """ Clean up a server's records """
-    #   pass
 
     def create_group(self, tenant_id, group_id):
         """ Create a group """
