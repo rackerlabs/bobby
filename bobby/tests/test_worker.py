@@ -79,7 +79,21 @@ class TestBobbyWorker(unittest.TestCase):
 
         cass.create_server.return_value = defer.succeed(None)
         self.maas_client.create_entity.return_value = defer.succeed('entity-abc')
-        server = {'uri': 'http://example.com/server-abc'}
+        server = {
+            'OS-DCF:diskConfig': 'AUTO',
+            'adminPass': 'LMoheHauXt8w',
+            'id': 'server-abc',
+            'links': [
+                {
+                    'href': 'https://dfw.servers.api.rackspacecloud.com/v2/010101/servers/ef08aa7a',
+                    'rel': 'self'
+                },
+                {
+                    'href': 'https://dfw.servers.api.rackspacecloud.com/010101/servers/ef08aa7a',
+                    'rel': 'bookmark'
+                }
+            ]
+        }
 
         w = worker.BobbyWorker(self.client)
         d = w.create_server('tenant-abc', 'group-def', server)
@@ -87,10 +101,10 @@ class TestBobbyWorker(unittest.TestCase):
 
         self.maas_client.create_entity.assert_called_once_with(server)
         cass.create_server.assert_called_once_with(
-            self.client, 'tenant-abc', server['uri'], 'entity-abc', 'group-def')
+            self.client, 'tenant-abc', server['id'], 'entity-abc', 'group-def')
 
-        cass.get_server_by_server_id.assert_called_once_with('http://example.com/server-abc')
-        cass.register_policy_on_server.assert_called_once_with(self.client, 'policy-abc', 'server-abc', 'alarm-xyz', 'check-xyz')
+        cass.get_server_by_server_id.assert_called_once_with(server['id'])
+        cass.register_policy_on_server.assert_called_once_with(self.client, 'policy-abc', server['id'], 'alarm-xyz', 'check-xyz')
 
     @mock.patch('bobby.worker.cass')
     def test_delete_server(self, cass):

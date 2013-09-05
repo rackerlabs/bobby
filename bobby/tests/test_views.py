@@ -57,13 +57,9 @@ class ViewTest(unittest.TestCase):
         self.worker.create_server.return_value = defer.succeed(server)
 
         request_json = {
-            'entityId': 'entity-xyz',
-            'serverId': 'server-rst',
-            'serverPolicies': [
-                {'policyId': 'policy-xyz',
-                 'alarmId': 'alarm-rst',
-                 'checkId': 'check-uvw'}
-            ]
+            'server': {
+                'id': 'server-abc'
+            }
         }
         request = BobbyDummyRequest('/101010/groups/group-uvw/servers/',
                                     content=json.dumps(request_json))
@@ -74,6 +70,9 @@ class ViewTest(unittest.TestCase):
         self.successResultOf(d)
         result = json.loads(request.written[0])
         self.assertEqual(result, expected)
+
+        self.worker.create_server.assert_called_once_with(
+            '101010', 'group-uvw', request_json['server'])
 
     def test_delete_server(self):
         """Deletes a server and returns 402."""
@@ -136,7 +135,7 @@ class TestCreatePolicy(ViewTest):
     """Test POST /{tenantId}/groups/{groupId}/policies"""
 
     @mock.patch('bobby.cass.create_policy')
-    def test_create_server(self, create_policy):
+    def test_create_policy(self, create_policy):
         """POSTing application/json creates a policy."""
         expected = {
             'alarmTemplate': 'alarm-template-jkl',
@@ -175,7 +174,7 @@ class TestDeletePolicy(ViewTest):
     """Test DELETE /{tenantId}/groups/{groupId}/policiess/{policyId}"""
 
     @mock.patch('bobby.cass.delete_policy')
-    def test_delete_server(self, delete_policy):
+    def test_delete_policy(self, delete_policy):
         """Deletes a policy and returns 402."""
         delete_policy.return_value = defer.succeed(None)
 

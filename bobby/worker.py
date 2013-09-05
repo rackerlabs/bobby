@@ -50,11 +50,11 @@ class BobbyWorker(object):
         d = maas_client.create_entity(server)
 
         def create_server_record(entity_id):
-            return cass.create_server(self._db, tenant_id, server.get('uri'), entity_id, group_id)
+            return cass.create_server(self._db, tenant_id, server.get('id'), entity_id, group_id)
         d.addCallback(create_server_record)
 
         def get_server(_):
-            return cass.get_server_by_server_id(server.get('uri'))
+            return cass.get_server_by_server_id(server.get('id'))
         d.addCallback(get_server)
 
         def apply_policies(server):
