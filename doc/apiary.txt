@@ -5,67 +5,13 @@ Group Resource
 Groups representing Autoscaling groups correlating to a group of monitored
 servers. (/tenantId/groups)
 --
-List all the server groups for a given tenant ID.
-GET /{tenantId}/groups
-< 200
-< Content-Type: application/json
-{
-    "groups": [
-        {
-            "groupId": "{groupId1}",
-            "links": [
-                {
-                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId1}",
-                    "rel": "self"
-                }
-            ],
-            "notification": "{notification1}",
-            "notificationPlan": "{notificationPlan1}",
-            "tenantId": "{tenantId}"
-        },
-        {
-            "groupId": "{groupId2}",
-            "links": [
-                {
-                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId2}",
-                    "rel": "self"
-                }
-            ],
-            "notification": "{notification2}",
-            "notificationPlan": "{notificationPlan2}",
-            "tenantId": "{tenantId}"
-        }
-    ]
-}
-
-
 Create a server group.
 POST /{tenantId}/groups
 > Accept: application/json
 {
     "groupId": "{groupId1}",
-    "notification": "{notification}",
-    "notificationPlan": "{notificationPlan}"
 }
 < 201
-< Content-Type: application/json
-{
-    "groupId": "{groupId}",
-    "links": [
-        {
-            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}",
-            "rel": "self"
-        }
-    ],
-    "notification": "{notification2}",
-    "notificationPlan": "{notificationPlan2}",
-    "tenantId": "{tenantId}"
-}
-
-
-Get a scaling group.
-GET /{tenantId}/groups/{groupId}:
-< 200
 < Content-Type: application/json
 {
     "groupId": "{groupId}",
@@ -93,62 +39,27 @@ Server Resource
 Servers are monitored in MaaS, and can receive alerts. They belong to scaling
 groups.
 --
-List all the servers for a given group ID.
-GET /{tenantId}/groups/{groupId}/servers
-< 200
-< Content-Type: application/json
-{
-    "servers": [
-        {
-            "entityId": "{entityId1}",
-            "groupId": "{groupId}",
-            "links": [
-                {
-                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId1}",
-                    "rel": "self"
-                }
-            ]
-            "serverId": "{serverId1}"
-        },
-        {
-            "entityId": "{entityId2}",
-            "groupId": "{groupId}",
-            "links": [
-                {
-                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId2}",
-                    "rel": "self"
-                }
-            ]
-            "serverId": "{serverId2}"
-        }
-    ]
-}
-
-
 Create a server group.
 POST /{tenantId}/groups/{groupId}/servers
 > Accept: application/json
 {
-    "entityId": "{entityId}",
-    "serverId": "{serverId}"
+    "server" : {
+        "OS-DCF:diskConfig": "AUTO",
+        "adminPass": "LMoheHauXt8w",
+        "id": "ef08aa7a",
+        "links": [
+            {
+                "href": "https://dfw.servers.api.rackspacecloud.com/v2/010101/servers/ef08aa7a",
+                "rel": "self"
+            },
+            {
+                "href": "https://dfw.servers.api.rackspacecloud.com/010101/servers/ef08aa7a",
+                "rel": "bookmark"
+            }
+        ]
+    }
 }
 < 201
-< Content-Type: application/json
-{
-    "entityId": "{entityId}",
-    "links": [
-        {
-            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/servers/{serverId}",
-            "rel": "self"
-        }
-    ],
-    "serverId": "{serverId}"
-}
-
-
-Get a scaling group.
-GET /{tenantId}/groups/{groupId}/servers/{serverId}
-< 200
 < Content-Type: application/json
 {
     "entityId": "{entityId}",
@@ -173,40 +84,6 @@ DELETE /{tenantId}/groups/{groupId}/servers/{serverId}
 Policy Resource
 Policies are references to autoscaling policies related to appropriate groups.
 --
-List all the policies for a given group ID.
-GET /{tenantId}/groups/{groupId}/policies
-< 200
-< Content-Type: application/json
-{
-    "policies": [
-        {
-            "alarmTemplateId": "{alarmTemplateId1}",
-            "checkTemplateId": "{checkTemplateId1}",
-            "groupId": "{groupId}",
-            "links": [
-                {
-                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId1}",
-                    "rel": "self"
-                }
-            ]
-            "policyId": "{policyId1}"
-        },
-        {
-            "alarmTemplateId": "{alarmTemplateId2}",
-            "checkTemplateId": "{checkTemplateId2}",
-            "groupId": "{groupId}",
-            "links": [
-                {
-                    "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId2}",
-                    "rel": "self"
-                }
-            ]
-            "policyId": "{policyId2}"
-        }
-    ]
-}
-
-
 Create a policy object.
 POST /{tenantId}/groups/{groupId}/policies
 > Accept: application/json
@@ -217,24 +94,6 @@ POST /{tenantId}/groups/{groupId}/policies
     "policyId": "{serverId}"
 }
 < 201
-< Content-Type: application/json
-{
-    "alarmTemplateId": "{alarmTemplateId}",
-    "checkTemplateId": "{checkTemplateId}",
-    "groupId": "{groupId}",
-    "links": [
-        {
-            "href": "{url_root}/v1.0/{tenantId}/groups/{groupId}/policies/{policyId}",
-            "rel": "self"
-        }
-    ]
-    "policyId": "{policyId}"
-}
-
-
-Get a policy.
-GET /{tenantId}/groups/{groupId}/policies/{policyId}
-< 200
 < Content-Type: application/json
 {
     "alarmTemplateId": "{alarmTemplateId}",
