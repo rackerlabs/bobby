@@ -45,6 +45,32 @@ class MaasClient(object):
                 break
         self._auth_token = auth_token
 
+    def create_entity(self, server):
+        entity_url = http.append_segments(self._endpoint, 'entities')
+        data = {
+            'label': server['label'],
+            'agent_id': server['agent_id'],
+            'ip_addresses': server['ip_addresses'],
+            'metadata': server['metadata']
+        }
+
+        d = treq.post(entity_url,
+                      headers=http.headers(self._auth_token),
+                      data=json.dumps(data))
+
+        def parse_response(response):
+            entity_id = response.headers.getRawHeaders('x-object-id')[0]
+            return defer.succeed(entity_id)
+        return d.addCallback(parse_response)
+
+    def delete_entity(self, entity_id):
+        entity_url = http.append_segments(self._endpoint, 'entities', entity_id)
+
+        d = treq.delete(entity_url,
+                        headers=http.headers(self._auth_token))
+        d.addCallback(http.check_success, [204])
+        return d
+
     def add_notification_and_plan(self):
         """Groups must have a Notification and Notification plan for Auto
 Scale.
@@ -55,6 +81,7 @@ Scale.
         notification_id = []
 
         # TODO: Finish this path to the webhook
+        # TODO: Add the group to the label.
         notification_data = {
             'label': 'Auto Scale Webhook Notification',
             'type': 'webhook',

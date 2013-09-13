@@ -3,80 +3,131 @@ Functions for actually doing things
 """
 
 from twisted.internet import defer
-from bobby import ele, cass
-
-# TODO: It's probably best to make this a class, and rather than constantly
-# specifying the db reference every time, make it a instance attribute.
+from bobby import cass
+from bobby.ele import MaasClient
 
 
-def create_server_entity(tenant_id, policy_id, server_id):
-    """ Creates a server's entity in MaaS """
-    ele.fetch_entity_by_uuid(tenant_id, policy_id, server_id)
-    apply_policies_to_server(tenant_id, server_id)
-    return defer.succeed(None)
+class BobbyWorker(object):
+    """Worker for doing tasks."""
 
+    def __init__(self, db):
+        self._db = db
 
-def apply_policies_to_server(db, tenant_id, group_id, server_id, entity_id, nplan_id):
-    """ Apply policies to a new server """
-    d = cass.get_policies_by_group_id(db, group_id)
+    def _get_maas_client(self):
+        # TODO: get the service catalog and auth token.
+        return MaasClient({}, 'abc')
 
-    def proc_policies(policies):
-        deferreds = [
-            add_policy_to_server(db, tenant_id, policy['policyId'], server_id, entity_id,
-                                 policy['checkTemplate'], policy['alarmTemplate'], nplan_id)
-            for policy in policies
-        ]
-        return defer.gatherResults(deferreds, consumeErrors=False)
-    d.addCallback(proc_policies)
-    d.addCallback(lambda _: None)
-    return d
+    def create_group(self, tenant_id, group_id):
+        """Create a group, and register a notification and notification plan."""
+        maas_client = self._get_maas_client()
+        d = maas_client.add_notification_and_plan()
 
-# Commented out so as to not screw up lint
-#def remove_server(tenant_id, server_id):
-#   """ Clean up a server's records """
-#   pass
+        def create_group_in_db((notification, notification_plan)):
+            return cass.create_group(
+                self._db, tenant_id, group_id, notification, notification_plan)
+        d.addCallback(create_group_in_db)
 
+        return d
 
-def create_group(db, tenant_id, group_id):
-    """ Create a group """
-    # TODO: get the service catalog and auth token
-    maas_client = ele.MaasClient({}, 'abc')
-    d = maas_client.add_notification_and_plan()
+    def delete_group(self, tenant_id, group_id):
+        d = cass.get_group_by_id(self._db, tenant_id, group_id)
 
-    def create_group((notification_id, notification_plan_id)):
-        return cass.create_group(db, group_id, tenant_id, notification_id, notification_plan_id)
-    return d.addCallback(create_group)
+        def remove_notification(group):
+            maas_client = self._get_maas_client()
+            return maas_client.remove_notification_and_plan(
+                group['notification'], group['notificationPlan'])
+        d.addCallback(remove_notification)
 
+        def delete_group_from_db(_):
+            return cass.delete_group(self._db, tenant_id, group_id)
+        d.addCallback(delete_group_from_db)
 
-def apply_policy(db, tenant_id, group_id, policy_id, check_template, alarm_template, nplan_id):
-    """Apply a new policy accross a group of servers"""
-    d = cass.get_servers_by_group_id(db, tenant_id, group_id)
+        return d
 
-    def proc_servers(servers):
-        deferreds = [
-            add_policy_to_server(db, tenant_id, policy_id, server['serverId'], server['entityId'],
-                                 check_template, alarm_template, nplan_id)
-            for server in servers
-        ]
-        return defer.gatherResults(deferreds, consumeErrors=False)
-    d.addCallback(proc_servers)
-    d.addCallback(lambda _: None)
-    return d
+    def create_server(self, tenant_id, group_id, server):
+        """Create a server, register it with MaaS."""
+        maas_client = self._get_maas_client()
+        d = maas_client.create_entity(server)
 
+        def create_server_record(entity_id):
+            return cass.create_server(self._db, tenant_id, server.get('id'), entity_id, group_id)
+        d.addCallback(create_server_record)
 
-def add_policy_to_server(db, tenant_id, policy_id, server_id, entity_id, check_template, alarm_template,
-                         nplan_id):
-    """Adds a single policy to a server"""
-    # TODO: get the service catalog and auth token
-    maas_client = ele.MaasClient({}, 'abc')
-    d = maas_client.add_check(policy_id, entity_id, check_template)
+        def get_server(_):
+            return cass.get_server_by_server_id(server.get('id'))
+        d.addCallback(get_server)
 
-    def add_alarm(check):
-        d = maas_client.add_alarm(policy_id, entity_id, nplan_id, check['id'], alarm_template)
-        return d.addCallback(lambda alarm: (check['id'], alarm['id']))
-    d.addCallback(add_alarm)
+        def apply_policies(server):
+            return self.apply_policies_to_server(
+                tenant_id, group_id, server['serverId'], server['entityId'])
+        return d.addCallback(apply_policies)
 
-    def register_policy((check_id, alarm_id)):
-        return cass.register_policy_on_server(db, policy_id, server_id, alarm_id, check_id)
-    d.addCallback(register_policy)
-    return d
+    def delete_server(self, tenant_id, group_id, server_id):
+        """ Clean up a server's records """
+        d = cass.get_server_by_server_id(self._db, tenant_id, group_id, server_id)
+
+        def delete_entity(result):
+            maas_client = self._get_maas_client()
+            d = maas_client.delete_entity(result['entityId'])
+            return d
+        d.addCallback(delete_entity)
+
+        def delete_server_from_db(_):
+            return cass.delete_server(self._db, tenant_id, group_id, server_id)
+        d.addCallback(delete_server_from_db)
+
+        return d
+
+    def apply_policies_to_server(self, tenant_id, group_id, server_id, entity_id):
+        """ Apply policies to a new server """
+        group = []
+        d = cass.get_group_by_id(self._db, tenant_id, group_id)
+
+        def get_policies(_group):
+            group.append(_group)
+            return cass.get_policies_by_group_id(self._db, group_id)
+        d.addCallback(get_policies)
+
+        def proc_policies(policies):
+            deferreds = [
+                self.add_policy_to_server(
+                    tenant_id, policy['policyId'], server_id, entity_id,
+                    policy['checkTemplate'], policy['alarmTemplate'],
+                    group[0]['notificationPlan'])
+                for policy in policies
+            ]
+            return defer.gatherResults(deferreds, consumeErrors=False)
+        d.addCallback(proc_policies)
+        d.addCallback(lambda _: defer.succeed(None))
+        return d
+
+    def apply_policy(self, tenant_id, group_id, policy_id, check_template, alarm_template, nplan_id):
+        """Apply a new policy accross a group of servers"""
+        d = cass.get_servers_by_group_id(self._db, tenant_id, group_id)
+
+        def proc_servers(servers):
+            deferreds = [
+                self.add_policy_to_server(self._db, tenant_id, policy_id, server['serverId'], server['entityId'],
+                                          check_template, alarm_template, nplan_id)
+                for server in servers
+            ]
+            return defer.gatherResults(deferreds, consumeErrors=False)
+        d.addCallback(proc_servers)
+        d.addCallback(lambda _: None)
+        return d
+
+    def add_policy_to_server(self, tenant_id, policy_id, server_id, entity_id, check_template, alarm_template,
+                             nplan_id):
+        """Adds a single policy to a server"""
+        maas_client = self._get_maas_client()
+        d = maas_client.add_check(policy_id, entity_id, check_template)
+
+        def add_alarm(check):
+            d = maas_client.add_alarm(policy_id, entity_id, nplan_id, check['id'], alarm_template)
+            return d.addCallback(lambda alarm: (check['id'], alarm['id']))
+        d.addCallback(add_alarm)
+
+        def register_policy((check_id, alarm_id)):
+            return cass.register_policy_on_server(self._db, policy_id, server_id, alarm_id, check_id)
+        d.addCallback(register_policy)
+        return d
