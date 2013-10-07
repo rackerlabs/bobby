@@ -2,7 +2,9 @@
 Functions for actually doing things
 """
 
+import treq
 from twisted.internet import defer
+
 from bobby import cass
 from bobby.ele import MaasClient
 
@@ -131,3 +133,7 @@ class BobbyWorker(object):
             return cass.register_policy_on_server(self._db, policy_id, server_id, alarm_id, check_id)
         d.addCallback(register_policy)
         return d
+
+    def execute_policy(self, policy_id):
+        d = treq.post('{0}/execute'.format(policy_id))
+        return d.addCallback(treq.json_content)
