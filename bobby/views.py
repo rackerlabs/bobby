@@ -6,6 +6,7 @@ import json
 from klein import Klein
 from otter.log import log
 from otter.util.hashkey import generate_transaction_id
+from twisted.internet import defer
 from twisted.python import reflect
 
 from bobby import cass
@@ -57,7 +58,6 @@ class Bobby(object):
         d = self._worker.create_group(tenant_id, group_id)
 
         def _serialize_object(group):
-            # XXX: the actual way to do this is using a json encoder. Not now.
             json_object = {
                 'groupId': group['groupId'],
                 'links': [{
@@ -165,7 +165,6 @@ class Bobby(object):
         # Trigger actions to create the alarm and checks on the MaaS side and set things up
 
         def serialize(policy):
-            # XXX: the actual way to do this is using a json encoder. Not now.
             json_object = {
                 'alarmTemplate': policy['alarmTemplate'],
                 'checkTemplate': policy['checkTemplate'],
@@ -196,9 +195,6 @@ class Bobby(object):
         """
         d = cass.delete_policy(self._db, group_id, policy_id)
 
-        # Trigger actions to remove the MaaS Checks and alarms and stuff in an orderly fashion
-        # here...
-
         def finish(_):
             request.setHeader('Content-Type', 'application/json')
             request.setResponseCode(204)
@@ -209,6 +205,8 @@ class Bobby(object):
     @with_transaction_id()
     def alarm(self, request, log):
         """Change the state of an alarm."""
+        _policy_id = []
+
         content = json.loads(request.content.read())
         alarm_id = content.get('alarm').get('id')
         status = content.get('details').get('state')
@@ -216,12 +214,18 @@ class Bobby(object):
         d = cass.alter_alarm_state(self._db, alarm_id, status)
 
         def check_quorum_health((policy_id, server_id)):
+            _policy_id.append(policy_id)
             return cass.check_quorum_health(self._db, policy_id)
         d.addCallback(check_quorum_health)
 
-        def finish(health):
-            #TODO: do something with server health
+        def maybe_execute_policy(health):
+            if health:
+                return self._worker.execute_policy(_policy_id[0])
+            else:
+                defer.succeed(None)
+        d.addCallback(maybe_execute_policy)
 
+        def finish(_):
             request.setResponseCode(200)
             request.finish()
         return d.addCallback(finish)
